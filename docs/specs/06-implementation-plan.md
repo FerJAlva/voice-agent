@@ -9,6 +9,7 @@ Cada fase termina con criterios de aceptación verificables. Orden pensado para 
 
 ## Fase 1 · Backend n8n (20 min)
 - [ ] Importar `n8n/fluxa-tools.json` y `n8n/fluxa-post-call.json`; credenciales; ID de hoja; chat de Telegram; `SECRET` (opcional).
+- [ ] Importar y publicar `n8n/fluxa-error-alert.json`; asignarlo como Error workflow en Tools y Post-call.
 - [ ] Publicar los dos workflows.
 - [ ] Importar `n8n/fluxa-selftest.json`, poner la URL base de webhooks en su nodo **Config** y ejecutarlo:
   - Test Availability → huecos.

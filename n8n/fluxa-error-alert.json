@@ -1,0 +1,78 @@
+{
+  "name": "Fluxa Voice Agent · Error Alert",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "9a16b548-fb85-5f46-a9ac-08e4b9f3031f",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA · EXPLAIN ERROR — which node failed, what it means and how to fix it\n// ============================================================\nconst d = $input.first().json || {};\nconst ex = d.execution || {};\nconst err = ex.error || {};\nconst node = ex.lastNodeExecuted || (err.node && err.node.name) || 'desconocido';\nconst msg = String(err.message || err.description || 'Sin mensaje de error');\nconst wf = (d.workflow && d.workflow.name) || 'Fluxa Voice Agent';\nconst t = (node + ' ' + msg).toLowerCase();\nconst isSheets = /(sheet|spreadsheet|google|read demos|save demo|save lead)/.test(t);\nconst isTg = /(telegram|notify|alert on telegram)/.test(t);\n\nconst RULES = [\n  { test: isSheets && /(not found|unable to parse range|no sheet|requested entity)/.test(t),\n    what: 'No se encuentra la hoja o la pestaña (Demos / Leads).',\n    fix: 'Revisa el ID de la hoja \"Fluxa demo\" en los nodos de Google Sheets y que las pestañas se llamen exactamente Demos y Leads.' },\n  { test: (isSheets && /(401|403|invalid_grant|unauthorized|permission|forbidden|reconnect)/.test(t)) || /(invalid_grant|needs to be reconnected)/.test(t),\n    what: 'La credencial de Google no tiene acceso (caducada o sin permisos).',\n    fix: 'Credentials → \"Google Sheets account\" → Switch account / reconectar, y guarda.' },\n  { test: isTg && /(chat not found|bot was blocked|forbidden)/.test(t),\n    what: 'Telegram no puede entregar el aviso: chat ID incorrecto o no iniciaste el bot.',\n    fix: 'Abre @fluxa_alerts_syst_bot en Telegram y pulsa Iniciar; comprueba el chat ID 7711362732 en los nodos Notify.' },\n  { test: isTg && /(401|unauthorized|not found)/.test(t),\n    what: 'El token del bot de Fluxa no es válido.',\n    fix: 'Copia el token actual en @BotFather (/mybots → fluxa_alerts_syst_bot → API Token) y actualiza la credencial \"Fluxa bot\".' },\n  { test: /(can't parse entities|can.t parse entities)/.test(t),\n    what: 'Telegram no pudo leer el formato del mensaje (algún carácter especial).',\n    fix: 'Fallo puntual de formato: pásale el error a Claude para ajustar el mensaje.' },\n  { test: /(credential|credentials).*(not|missing|found|set)|no credentials/.test(t),\n    what: 'Un nodo no tiene credencial asignada.',\n    fix: `Abre el nodo \"${node}\" y elige su credencial en el desplegable.` },\n  { test: /(enotfound|econnrefused|etimedout|eai_again|socket hang up|timeout|timed out|503|502|504)/.test(t),\n    what: 'Fallo de conexión o servicio externo caído temporalmente.',\n    fix: 'Suele resolverse solo. Si se repite, revisa el VPS y la conexión de n8n.' },\n  { test: /(syntaxerror|unexpected token|is not defined|cannot read propert|is not a function)/.test(t),\n    what: 'Error en el código de un nodo (probablemente tras editarlo).',\n    fix: 'Revisa el último cambio en ese nodo o pásale el error a Claude.' }\n];\nconst rule = RULES.find(r => r.test) || { what: 'Error no clasificado.', fix: 'Abre la ejecución en n8n (Executions) y pásale el mensaje a Claude.' };\nconst text = [\n  '⚠️ Fluxa voice agent: fallo',\n  `Workflow: ${wf}`,\n  `Nodo: \"${node}\"`,\n  `Qué pasa: ${rule.what}`,\n  `Posible solución: ${rule.fix}`,\n  `Error original: ${msg.slice(0, 300)}`,\n  ex.url ? `Ver ejecución: ${ex.url}` : ''\n].filter(Boolean).join('\\n');\nreturn [{ json: { text } }];\n"
+      },
+      "id": "46a93f3f-453f-54c2-95f1-9db4e1008791",
+      "name": "Explain Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "c09cc052-6e9b-5e57-915f-7436d565130b",
+      "name": "Alert on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Explain Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explain Error": {
+      "main": [
+        [
+          {
+            "node": "Alert on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}

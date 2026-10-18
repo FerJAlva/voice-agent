@@ -29,3 +29,5 @@ const pc = run('post_call.js', { 'Post-call Webhook': [{ body: { type: 'post_cal
 ok(pc.row.score === 100 && pc.row.tier === 'Caliente', 'post-call lead score ' + pc.row.score + ' (' + pc.row.tier + ')');
 ok(/Nueva llamada/.test(pc.text), 'Telegram text built');
 ok(/Minutos de voz este mes: ~2.4 \/ 15/.test(pc.text), 'monthly minutes counter (' + pc.row.month_minutes + ' min)');
+const st = run('post_call.js', { 'Post-call Webhook': [{ body: { data: { conversation_id: 'selftest-1', metadata: { call_duration_secs: 95 }, analysis: { data_collection_results: {} } } } }] });
+ok(st.row.month_minutes === 2.4 && /AUTOPRUEBA/.test(st.text), 'self-test does not count towards the monthly minutes');

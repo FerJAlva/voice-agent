@@ -26,7 +26,7 @@ Visitor ──voice──► ElevenLabs agent (STT · LLM · TTS · knowledge ba
 ElevenLabs Agents · n8n · Google Sheets · Telegram · plain HTML (GitHub Pages)
 
 ## Product docs
-[PRD](docs/specs/01-prd.md) · [TRD](docs/specs/02-trd.md) · [Flows](docs/specs/03-flows.md) · [Design brief](docs/specs/04-design-brief.md) · [Data schema](docs/specs/05-data-schema.md) · [Implementation plan](docs/specs/06-implementation-plan.md) · [Market research](docs/market-research.md)
+[PRD](docs/specs/01-prd.md) · [TRD](docs/specs/02-trd.md) · [Flows](docs/specs/03-flows.md) · [Design brief](docs/specs/04-design-brief.md) · [Data schema](docs/specs/05-data-schema.md) · [Implementation plan](docs/specs/06-implementation-plan.md) · [Market research](docs/market-research.md) · [Client delivery](docs/client-delivery.md)
 
 ## Costs
 Runs at **0 €/month** on free tiers. See [COSTS.md](COSTS.md).

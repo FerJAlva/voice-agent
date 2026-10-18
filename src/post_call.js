@@ -32,15 +32,18 @@ const FREE_MIN = 15;
 const sd = (typeof $getWorkflowStaticData === 'function') ? $getWorkflowStaticData('global') : {};
 const month = new Date().toISOString().slice(0, 7);
 if (sd.month !== month) { sd.month = month; sd.seconds = 0; sd.calls = 0; }
-sd.seconds = (sd.seconds || 0) + (Number(meta.call_duration_secs) || 0);
-sd.calls = (sd.calls || 0) + 1;
+const isSelfTest = String(d.conversation_id || '').startsWith('selftest');   // self-tests never count towards the quota
+if (!isSelfTest) {
+  sd.seconds = (sd.seconds || 0) + (Number(meta.call_duration_secs) || 0);
+  sd.calls = (sd.calls || 0) + 1;
+}
 const usedMin = Math.round(sd.seconds / 6) / 10;
 row.month_minutes = usedMin;
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const text = `📞 <b>Nueva llamada · ${tier} (${score})</b>\n` +
+const text = `${isSelfTest ? '🧪 <b>[AUTOPRUEBA]</b> ' : ''}📞 <b>Nueva llamada · ${tier} (${score})</b>\n` +
   `${esc(row.name || 'Sin nombre')} · ${esc(row.role || '?')} · ${esc(row.company || '?')}\n` +
   `Equipo: ${esc(row.team_size || '?')} · Plazo: ${esc(row.timeline || '?')} · Demo: ${row.demo_booked === 'true' ? 'sí' : 'no'}` +
   (row.summary ? `\n\n${esc(row.summary.slice(0, 600))}` : '') +
-  `\n\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` +
+  `\n\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') +
   (usedMin >= FREE_MIN * 0.8 ? '\n⚠️ Quedan pocos minutos: la demo dejará de responder al llegar a 15.' : '');
 return [{ json: { row, text } }];

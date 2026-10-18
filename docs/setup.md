@@ -12,9 +12,10 @@ Crea una hoja "Fluxa demo" con dos pestañas y estas cabeceras en la fila 1:
 2. En los nodos de Google Sheets: credencial "Google Sheets account" y reemplaza `REPLACE_WITH_FLUXA_SHEET_ID` por el ID de la hoja.
 3. En los nodos de Telegram: credencial (puede ser la de HR Advisor) y reemplaza `REPLACE_WITH_TELEGRAM_CHAT_ID`.
 4. (Opcional, recomendado) En los nodos **Availability** y **Book**, cambia `SECRET` por una clave tuya; la usarás como cabecera `x-demo-key` en ElevenLabs.
-5. Settings → zona horaria **Europe/Madrid**. **Publica** los dos workflows.
-6. Copia las URLs de producción de los webhooks (`…/webhook/fluxa-availability`, `…/webhook/fluxa-book`, `…/webhook/fluxa-post-call`).
-7. **Autoprueba:** importa `n8n/fluxa-selftest.json`, pon tu URL base (`https://<tu-dominio-n8n>/webhook`) en el nodo **Config** y pulsa *Execute workflow*. El nodo **Report** debe mostrar tres OK. Después borra las filas de prueba de la hoja.
+5. **Avisos de error:** importa `n8n/fluxa-error-alert.json`, credencial de Telegram del bot de Fluxa en **Alert on Telegram**, chat ID, y **publícalo** (n8n exige que el error workflow esté publicado para poder elegirlo).
+6. En Tools y Post-call: Settings → zona horaria **Europe/Madrid** y **Error workflow → "Fluxa Voice Agent · Error Alert"**. **Publica** los dos workflows.
+7. Copia las URLs de producción de los webhooks (`…/webhook/fluxa-availability`, `…/webhook/fluxa-book`, `…/webhook/fluxa-post-call`).
+8. **Autoprueba:** importa `n8n/fluxa-selftest.json`, pon tu URL base (`https://<tu-dominio-n8n>/webhook`) en el nodo **Config** y pulsa *Execute workflow*. El nodo **Report** debe mostrar tres OK. Después borra las filas de prueba de la hoja.
 
 ## 3. ElevenLabs (cuenta personal, plan gratuito)
 1. Agents → **Create agent** (en blanco). Nombre: "Nora · Fluxa".

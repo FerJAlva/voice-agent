@@ -23,7 +23,8 @@ def sheet_append(name, tab, pos):
     return node(name, "n8n-nodes-base.googleSheets", 4.5, {"operation": "append",
         "documentId": {"__rl": True, "value": SHEET, "mode": "id"}, "sheetName": {"__rl": True, "value": tab, "mode": "name"},
         "columns": {"mappingMode": "autoMapInputData", "value": {}, "matchingColumns": [], "schema": []}, "options": {}}, pos,
-        onError="continueRegularOutput")
+        retryOnFail=True, maxTries=3, waitBetweenTries=5000)
+        # no onError: if saving fails the run stops and the Error workflow alerts you (a lost booking must never be silent)
 def tg(name, text, pos):
     return node(name, "n8n-nodes-base.telegram", 1.2, {"chatId": CHAT, "text": text,
         "additionalFields": {"appendAttribution": False, "disable_web_page_preview": True, "parse_mode": "HTML"}}, pos,
@@ -105,3 +106,17 @@ json.dump({"name": "Fluxa Voice Agent · Self-test", "nodes": nodes, "connection
            "settings": {"executionOrder": "v1", "timezone": "Europe/Madrid"}, "active": False, "tags": []},
           open('n8n/fluxa-selftest.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 print('ok selftest')
+
+# ---------- Error alert workflow ----------
+nodes = [
+    node("Error Trigger", "n8n-nodes-base.errorTrigger", 1, {}, [0, 0]),
+    code("Explain Error", r('error_explain.js'), [220, 0]),
+    node("Alert on Telegram", "n8n-nodes-base.telegram", 1.2, {"chatId": CHAT, "text": "={{ $json.text }}",
+         "additionalFields": {"appendAttribution": False, "disable_web_page_preview": True}}, [440, 0]),
+]
+con = {}
+link(con, "Error Trigger", "Explain Error"); link(con, "Explain Error", "Alert on Telegram")
+json.dump({"name": "Fluxa Voice Agent · Error Alert", "nodes": nodes, "connections": con, "pinData": {},
+           "settings": {"executionOrder": "v1", "timezone": "Europe/Madrid"}, "active": False, "tags": []},
+          open('n8n/fluxa-error-alert.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+print('ok error-alert')

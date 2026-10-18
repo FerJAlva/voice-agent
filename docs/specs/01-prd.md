@@ -29,6 +29,8 @@ Un agente de voz en la web que responde al instante, en español o inglés, cual
 
 **Fuera de alcance:** telefonía real, llamadas salientes, CRM real, pagos, multiusuario.
 
+**Para una versión de cliente:** canal comercial (Slack/Teams/email/CRM) separado del canal de operaciones (errores y costes). Detalle en `docs/client-delivery.md`.
+
 ## Métricas de éxito (de la demo)
 - Latencia percibida natural; la llamada completa en < 4 min.
 - ≥ 8/9 guiones de prueba superados.

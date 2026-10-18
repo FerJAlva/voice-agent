@@ -7,14 +7,15 @@ Nada del empleador actual del usuario: ni datos, ni credenciales, ni código, ni
 Agente de voz de demostración ("Nora") para una SaaS B2B ficticia (Fluxa): cualifica leads en español e inglés y agenda demos de 30 min. Se prueba desde un widget web en el portfolio del usuario (`ferjalva.github.io/fluxa/`). Comunicación con el usuario en **español**, directa.
 
 ## Documentos de especificación (leer antes de construir)
-`docs/specs/01-prd.md` (qué y por qué) · `02-trd.md` (stack y contratos) · `03-flows.md` (conversación y sistema) · `04-design-brief.md` · `05-data-schema.md` · `06-implementation-plan.md` (fases con criterios de aceptación: **seguir este orden**). Contexto de mercado: `docs/market-research.md`.
+`docs/specs/01-prd.md` (qué y por qué) · `02-trd.md` (stack y contratos) · `03-flows.md` (conversación y sistema) · `04-design-brief.md` · `05-data-schema.md` · `06-implementation-plan.md` (fases con criterios de aceptación: **seguir este orden**). Contexto de mercado: `docs/market-research.md`. Entrega a clientes (servicio gestionado vs. sin mantenimiento, y mapa de qué cambiar y dónde): `docs/client-delivery.md`.
 Posicionamiento: no es "un bot que agenda" sino un **AI SDR de inbound con analítica de ventas** (brief para el AE + panel de embudo + suite de pruebas).
 
 ## Arquitectura
 - **ElevenLabs Agents** (cuenta personal, plan gratuito: ~15 min/mes): voz, LLM, base de conocimiento, herramientas webhook, análisis post-llamada.
 - **n8n** (VPS del usuario): `n8n/fluxa-tools.json` (webhooks `fluxa-availability`, `fluxa-book`) y `n8n/fluxa-post-call.json` (webhook `fluxa-post-call`).
 - **Google Sheets** "Fluxa demo": pestañas `Demos` y `Leads`.
-- **Telegram**: aviso de reservas y leads.
+- **Telegram**: bot propio del proyecto (@fluxa_alerts_syst_bot, credencial "Fluxa bot") para reservas, leads y errores.
+- **Errores**: `n8n/fluxa-error-alert.json` como Error workflow de Tools y Post-call.
 - **Web**: `web/index.html` (landing ficticia + widget).
 
 ## Archivos
