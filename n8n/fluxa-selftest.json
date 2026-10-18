@@ -1,0 +1,199 @@
+{
+  "name": "Fluxa Voice Agent · Self-test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "893f8e57-2853-50a1-bf31-c4e96f9f5449",
+      "name": "Run self-test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA · SELF-TEST CONFIG — edit these two values, then \"Execute workflow\".\n// Calls the three production webhooks with sample data. No local tools needed.\n// ============================================================\nreturn [{ json: {\n  baseUrl: 'https://REPLACE_WITH_YOUR_N8N_DOMAIN/webhook',   // e.g. https://my-n8n.example.com/webhook\n  secret: 'CHANGE_ME_IN_N8N'                                  // same value as SECRET in Availability / Book (leave as is if unchanged)\n} }];\n"
+      },
+      "id": "507edd36-dd7b-5e0b-a50a-d1c113f3ce6e",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.baseUrl + '/fluxa-availability' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-demo-key",
+              "value": "={{ $('Config').first().json.secret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ language: 'es' }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "ea009ca6-9b51-504d-8727-f43e78d00bea",
+      "name": "Test Availability",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.baseUrl + '/fluxa-book' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-demo-key",
+              "value": "={{ $('Config').first().json.secret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: 'Lead de Prueba', email: 'prueba@example.com', company: 'Empresa Demo', role: 'Head of Operations', team_size: '40', use_case: 'Automatizar reporting', slot_iso: (($('Test Availability').first().json.slots || [])[0] || {}).slot_iso || '', language: 'es' }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "d5f90eee-bcdb-57ee-8d64-b9b0e006b795",
+      "name": "Test Book",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.baseUrl + '/fluxa-post-call' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-demo-key",
+              "value": "={{ $('Config').first().json.secret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'post_call_transcription', data: { conversation_id: 'selftest-' + Date.now(), metadata: { call_duration_secs: 95 }, transcript: [{ role: 'agent', message: 'Hola' }, { role: 'user', message: 'Hola' }], analysis: { transcript_summary: 'Prueba automática: lead de ejemplo interesado en automatizar el reporting semanal.', data_collection_results: { name: { value: 'Lead de Prueba' }, company: { value: 'Empresa Demo' }, role: { value: 'Head of Operations' }, team_size: { value: '40' }, use_case: { value: 'Automatizar el reporting semanal de operaciones' }, timeline: { value: 'este trimestre' }, demo_booked: { value: true }, language: { value: 'es' } } } } }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "cf89fc73-a3ab-53f7-90b6-9755645e7448",
+      "name": "Test Post-call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Summarises the self-test results in one item (see the output of this node)\nconst get = (n) => { try { return $(n).first().json; } catch (e) { return { error: 'not executed' }; } };\nconst av = get('Test Availability'), bk = get('Test Book'), pc = get('Test Post-call');\nconst slots = (av && av.slots) || [];\nreturn [{ json: {\n  availability: slots.length ? `OK · ${slots.length} huecos · primero: ${slots[0].label}` : `FALLO · ${JSON.stringify(av).slice(0, 200)}`,\n  booking: bk && bk.ok ? `OK · ${bk.say}` : `FALLO · ${JSON.stringify(bk).slice(0, 200)}`,\n  post_call: pc && !pc.error ? 'OK · revisa la pestaña Leads y Telegram' : `FALLO · ${JSON.stringify(pc).slice(0, 200)}`,\n  next: 'Si los tres están OK, el backend está listo para conectar el agente de ElevenLabs.'\n} }];\n"
+      },
+      "id": "40fd14a6-6b50-5367-a469-c0a149928af2",
+      "name": "Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run self-test": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Test Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Availability": {
+      "main": [
+        [
+          {
+            "node": "Test Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Book": {
+      "main": [
+        [
+          {
+            "node": "Test Post-call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Post-call": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}

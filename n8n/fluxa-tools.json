@@ -1,0 +1,390 @@
+{
+  "name": "Fluxa Voice Agent · Tools",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxa-availability",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "686599fd-e615-5529-a8bc-8839315778ea",
+      "name": "Availability Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "dc6796a2-f4d1-584b-9a6e-e4fe953f9793"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_FLUXA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Demos",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "id": "b63c137e-e7c2-5575-be57-ddc25b686740",
+      "name": "Read Demos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        0
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA DEMO · CHECK AVAILABILITY  (tool called by the voice agent)\n// Demo rules: Mon–Fri, 10:00–17:00 Europe/Madrid, 30-min slots, next business days,\n// minus slots already booked in the Google Sheets tab \"Demos\".\n// Input (POST body from ElevenLabs): { preferred_day?: \"2026-10-20\" | \"monday\" | \"lunes\", language?: \"es\"|\"en\" }\n// ============================================================\nconst SECRET = 'CHANGE_ME_IN_N8N';           // optional: must match the header x-demo-key set in the ElevenLabs tool\nconst req = $('Availability Webhook').first().json;\nif (SECRET !== 'CHANGE_ME_IN_N8N' && (req.headers || {})['x-demo-key'] !== SECRET) return [{ json: { ok: false, error: 'unauthorized' } }];\nconst body = req.body || {};\nconst lang = String(body.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nconst TZ = 'Europe/Madrid';\nlet booked = [];\ntry { booked = $('Read Demos').all().map(i => String(i.json.slot_iso || '')).filter(Boolean); } catch (e) { booked = []; }\nconst bookedSet = new Set(booked);\n\n// offset (minutes) of TZ at a given UTC instant\nconst tzOffset = (d) => {\n  const p = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })\n    .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});\n  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);\n  return Math.round((asUTC - d.getTime()) / 60000);\n};\n// UTC Date for a Madrid wall-clock time\nconst madrid = (y, m, d, hh, mm) => { const guess = new Date(Date.UTC(y, m - 1, d, hh, mm)); return new Date(guess.getTime() - tzOffset(guess) * 60000); };\nconst localParts = (d) => new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })\n  .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});\nconst label = (d) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(d);\n\nconst DAYS = { monday: 1, lunes: 1, tuesday: 2, martes: 2, wednesday: 3, miercoles: 3, 'miércoles': 3, thursday: 4, jueves: 4, friday: 5, viernes: 5 };\nconst pref = String(body.preferred_day || '').toLowerCase().trim();\nconst now = new Date();\nconst minStart = now.getTime() + 2 * 3600 * 1000;   // at least 2 h notice\nconst slots = [];\nfor (let i = 0; i < 14 && slots.length < 40; i++) {\n  const p = localParts(new Date(now.getTime() + i * 86400000));\n  const wd = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 }[p.weekday];\n  if (wd === 0 || wd === 6) continue;\n  if (pref && /^\\d{4}-\\d{2}-\\d{2}$/.test(pref) && `${p.year}-${p.month}-${p.day}` !== pref) continue;\n  if (pref && DAYS[pref] && DAYS[pref] !== wd) continue;\n  for (let h = 10; h < 17; h++) for (const mm of [0, 30]) {\n    const s = madrid(+p.year, +p.month, +p.day, h, mm);\n    if (s.getTime() < minStart) continue;\n    if (!bookedSet.has(s.toISOString())) slots.push(s);\n  }\n}\n// offer a few spread-out options, not all of them\nconst pick = [];\nfor (const s of slots) { if (!pick.length || s - pick[pick.length - 1] >= 3 * 3600 * 1000) pick.push(s); if (pick.length >= 4) break; }\nreturn [{ json: {\n  ok: true, timezone: TZ,\n  slots: pick.map(s => ({ slot_iso: s.toISOString(), label: label(s) })),\n  note: pick.length ? '' : (lang === 'en' ? 'No free slots for that day. Offer another day.' : 'No hay huecos ese día. Ofrece otro día.')\n} }];\n"
+      },
+      "id": "9a7a7431-efec-54c6-b13a-d06aaa00eb57",
+      "name": "Availability",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "77583acc-803e-5d23-a135-c308c5281c2f",
+      "name": "Respond Availability",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fluxa-book",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2f629e5b-8f3e-584a-8a21-0c7520c90bbf",
+      "name": "Book Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "cf2a2529-f07d-5e76-acd2-6fb0274dede1"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_FLUXA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Demos",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "id": "136fd242-92ff-5647-92d6-3e40e19e48f9",
+      "name": "Read Demos (book)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        300
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA DEMO · BOOK DEMO  (tool called by the voice agent)\n// Input: { name, email, company, role?, team_size?, use_case?, slot_iso, language? }\n// Validates the slot and returns { ok, row, say }. The row is appended to the \"Demos\" tab.\n// ============================================================\nconst SECRET = 'CHANGE_ME_IN_N8N';\nconst req = $('Book Webhook').first().json;\nif (SECRET !== 'CHANGE_ME_IN_N8N' && (req.headers || {})['x-demo-key'] !== SECRET) return [{ json: { ok: false, error: 'unauthorized' } }];\nconst b = req.body || {};\nconst lang = String(b.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nconst fail = (error, es, en, extra = {}) => [{ json: { ok: false, error, say: lang === 'en' ? en : es, ...extra } }];\nconst missing = ['name', 'email', 'company', 'slot_iso'].filter(k => !String(b[k] || '').trim());\nif (missing.length) return fail('missing_fields', `Me falta: ${missing.join(', ')}.`, `I still need: ${missing.join(', ')}.`, { missing });\nif (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(String(b.email).trim())) return fail('invalid_email', 'Ese email no parece válido. ¿Me lo deletreas de nuevo?', 'That email does not look valid. Can you spell it again?');\nconst slot = new Date(b.slot_iso);\nif (isNaN(slot) || slot.getTime() < Date.now()) return fail('invalid_slot', 'Ese horario no está disponible. Déjame ver otras opciones.', 'That time is not available. Let me check other options.');\nlet booked = [];\ntry { booked = $('Read Demos (book)').all().map(i => String(i.json.slot_iso || '')); } catch (e) { booked = []; }\nif (booked.includes(slot.toISOString())) return fail('slot_taken', 'Ese hueco se acaba de ocupar. Te ofrezco otro.', 'That slot was just taken. Let me offer another one.');\nconst id = 'demo_' + Date.now().toString(36);\nconst when = new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(slot);\nreturn [{ json: {\n  ok: true,\n  row: { id, slot_iso: slot.toISOString(), when_madrid: when, name: String(b.name).trim(), email: String(b.email).trim().toLowerCase(),\n         company: String(b.company).trim(), role: String(b.role || ''), team_size: String(b.team_size || ''), use_case: String(b.use_case || ''),\n         language: lang, created_at: new Date().toISOString() },\n  say: lang === 'en' ? `Done. Your demo is booked for ${when} (Madrid time). You will get a confirmation by email.`\n                     : `Listo. Tu demo queda reservada para el ${when} (hora de Madrid). Recibirás la confirmación por email.`\n} }];\n"
+      },
+      "id": "30db21f9-c1e9-5d6d-bae6-46b572c09806",
+      "name": "Book",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "92180554-86ab-5f7a-bc16-ab484e5ff427",
+              "leftValue": "={{ $json.ok ? 'yes' : 'no' }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "57905d0a-79c9-597d-b23e-a9cfc177eb75",
+      "name": "Booked?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Book').first().json.row }];"
+      },
+      "id": "42bae770-a107-5881-b681-f528b69ed799",
+      "name": "Demo Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_FLUXA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Demos",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "729f4aa8-cb13-5610-a4c1-3713b65f8b08",
+      "name": "Save Demo",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ '📅 <b>Demo reservada</b>\\n' + $('Book').first().json.row.name + ' · ' + $('Book').first().json.row.company + '\\n' + $('Book').first().json.row.when_madrid + ' (Madrid) · ' + $('Book').first().json.row.email }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "94bba543-a335-5cb2-a794-eca72203d25c",
+      "name": "Notify Demo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $('Book').first().json.ok, say: $('Book').first().json.say, error: $('Book').first().json.error || null }) }}",
+        "options": {}
+      },
+      "id": "3858cd27-33b1-566e-b53b-f9273660761c",
+      "name": "Respond Book",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Fluxa voice agent · Tools\nTwo webhooks called by the ElevenLabs agent:\n- POST /webhook/fluxa-availability → free demo slots\n- POST /webhook/fluxa-book → books a slot in the **Demos** tab\nSet the Sheet ID in the 3 Sheets nodes, the Telegram chat ID and credentials. Publish.",
+        "height": 220,
+        "width": 460
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Availability Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Demos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Demos": {
+      "main": [
+        [
+          {
+            "node": "Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Availability": {
+      "main": [
+        [
+          {
+            "node": "Respond Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Demos (book)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Demos (book)": {
+      "main": [
+        [
+          {
+            "node": "Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book": {
+      "main": [
+        [
+          {
+            "node": "Booked?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booked?": {
+      "main": [
+        [
+          {
+            "node": "Demo Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Demo Row": {
+      "main": [
+        [
+          {
+            "node": "Save Demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Demo": {
+      "main": [
+        [
+          {
+            "node": "Notify Demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Demo": {
+      "main": [
+        [
+          {
+            "node": "Respond Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}
