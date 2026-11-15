@@ -1,6 +1,6 @@
 # COSTS.md — Costes del proyecto (mantener siempre actualizado)
 
-Última revisión: 2026-10-18. **Regla:** cualquier cambio que añada un servicio, un plan o un consumo nuevo actualiza esta tabla en el mismo commit.
+Última revisión: 2026-11-15. **Regla:** cualquier cambio que añada un servicio, un plan o un consumo nuevo actualiza esta tabla en el mismo commit.
 
 ## Costes actuales
 | Servicio | Plan | Coste/mes | Límite y control | Dónde se mira |
@@ -10,6 +10,7 @@
 | n8n | VPS propio (compartido con otros proyectos) | **[completar: X €/mes]** | — | Proveedor del VPS |
 | Google Sheets | Gratis | 0 € | — | — |
 | Telegram | Gratis | 0 € | — | — |
+| Gmail (email de confirmación al lead) | Cuenta de Google gratuita | 0 € | ~500 emails/día con Gmail personal (2.000 con Workspace); 1 email por demo reservada | Gmail → Enviados |
 | GitHub + GitHub Pages | Gratis | 0 € | Repo público | — |
 | **Total nuevo de este proyecto** | | **0 €** | | |
 

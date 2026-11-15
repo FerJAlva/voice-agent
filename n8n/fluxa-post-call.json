@@ -3,6 +3,38 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## Fluxa · Post-call (después de cada llamada)\nElevenLabs envía aquí la transcripción y el análisis al terminar cada conversación (webhook de workspace, firmado con HMAC).\n**Configurar:** ID de la hoja en **Save Lead** · chat ID en **Notify Lead** · credenciales · Publish.\nLa puntuación del lead (BANT simplificado) y el contador de minutos están en el nodo **Post-call**.",
+        "width": 900,
+        "height": 260,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ① Recibir y puntuar\nLee el resumen y los 8 datos extraídos por ElevenLabs, puntúa el lead (0–100 → Caliente / Templado / Frío) y suma los minutos de voz del mes (los chats de texto y las autopruebas no cuentan).",
+        "width": 460,
+        "height": 400,
+        "color": 5
+      },
+      "id": "27f0791a-0fc4-5e51-a061-d00ecace4558",
+      "name": "Stage 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -180
+      ]
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "fluxa-post-call",
         "responseMode": "onReceived",
@@ -14,13 +46,13 @@
       "typeVersion": 2,
       "position": [
         0,
-        0
+        40
       ],
       "webhookId": "851f03c9-e675-5e9d-8048-e8e69b705252"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// FLUXA DEMO · POST-CALL  (ElevenLabs post-call webhook)\n// Extracts summary and collected data, scores the lead (BANT-lite) and prepares\n// a row for the \"Leads\" tab plus a Telegram message.\n// ============================================================\nconst req = $('Post-call Webhook').first().json;\nconst p = req.body || {};\nconst d = p.data || p;\nconst a = d.analysis || {};\nconst dc = a.data_collection_results || {};\nconst val = (k) => { const x = dc[k]; return x == null ? '' : (typeof x === 'object' ? (x.value ?? '') : x); };\nconst transcript = Array.isArray(d.transcript) ? d.transcript : [];\nconst meta = d.metadata || {};\n\nlet score = 0;\nconst size = parseInt(String(val('team_size')).replace(/\\D/g, '')) || 0;\nif (size >= 20) score += 25; else if (size >= 5) score += 15;\nif (/director|head|vp|lead|manager|founder|ceo|coo|cto|responsable|jefe/i.test(String(val('role')))) score += 25;\nif (/(this|next) (month|quarter)|este (mes|trimestre)|pr[oó]ximo (mes|trimestre)|asap|cuanto antes/i.test(String(val('timeline')))) score += 25;\nif (String(val('use_case')).length > 15) score += 15;\nif (String(val('demo_booked')).toLowerCase() === 'true') score += 10;\nconst tier = score >= 70 ? 'Caliente' : score >= 40 ? 'Templado' : 'Frío';\n\nconst row = {\n  conversation_id: d.conversation_id || '', date: new Date().toISOString(), duration_s: meta.call_duration_secs || '',\n  language: val('language'), name: val('name'), company: val('company'), role: val('role'), team_size: val('team_size'),\n  use_case: val('use_case'), timeline: val('timeline'), demo_booked: String(val('demo_booked') || ''),\n  score, tier, summary: String(a.transcript_summary || '').slice(0, 1500), turns: transcript.filter(t => t && t.message).length\n};\n// Monthly usage counter (ElevenLabs free plan = 15 min/month). Persists in workflow static data (production runs).\nconst FREE_MIN = 15;\nconst sd = (typeof $getWorkflowStaticData === 'function') ? $getWorkflowStaticData('global') : {};\nconst month = new Date().toISOString().slice(0, 7);\nif (sd.month !== month) { sd.month = month; sd.seconds = 0; sd.calls = 0; }\nconst isSelfTest = String(d.conversation_id || '').startsWith('selftest');   // self-tests never count towards the quota\nif (!isSelfTest) {\n  sd.seconds = (sd.seconds || 0) + (Number(meta.call_duration_secs) || 0);\n  sd.calls = (sd.calls || 0) + 1;\n}\nconst usedMin = Math.round(sd.seconds / 6) / 10;\nrow.month_minutes = usedMin;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst text = `${isSelfTest ? '🧪 <b>[AUTOPRUEBA]</b> ' : ''}📞 <b>Nueva llamada · ${tier} (${score})</b>\\n` +\n  `${esc(row.name || 'Sin nombre')} · ${esc(row.role || '?')} · ${esc(row.company || '?')}\\n` +\n  `Equipo: ${esc(row.team_size || '?')} · Plazo: ${esc(row.timeline || '?')} · Demo: ${row.demo_booked === 'true' ? 'sí' : 'no'}` +\n  (row.summary ? `\\n\\n${esc(row.summary.slice(0, 600))}` : '') +\n  `\\n\\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') +\n  (usedMin >= FREE_MIN * 0.8 ? '\\n⚠️ Quedan pocos minutos: la demo dejará de responder al llegar a 15.' : '');\nreturn [{ json: { row, text } }];\n"
+        "jsCode": "// ============================================================\n// FLUXA DEMO · POST-CALL  (ElevenLabs post-call webhook)\n// Extracts summary and collected data, scores the lead (BANT-lite) and prepares\n// a row for the \"Leads\" tab plus a Telegram message.\n// ============================================================\nconst req = $('Post-call Webhook').first().json;\nconst p = req.body || {};\nconst d = p.data || p;\nconst a = d.analysis || {};\n// ElevenLabs keys each result by an internal id (aitem_…) and puts the identifier in x.name.\n// Older payloads keyed them by identifier. Index by identifier (lower case) so both work.\nconst dc = {};\nfor (const [k, x] of Object.entries(a.data_collection_results || {})) {\n  dc[String((x && typeof x === 'object' && x.name) || k).trim().toLowerCase()] = x;\n}\nconst val = (k) => { const x = dc[k]; return x == null ? '' : (typeof x === 'object' ? (x.value ?? '') : x); };\nconst transcript = Array.isArray(d.transcript) ? d.transcript : [];\nconst meta = d.metadata || {};\n\n// ---------- LEAD SCORING (edit SCORING to adapt it to each client) ----------\n// Each rule adds points and leaves a reason, so the sales team sees WHY a lead is hot.\nconst SCORING = {\n  hot: 70, warm: 40,                                   // tier thresholds (0–100)\n  teamLarge: 20, teamMid: 5,                           // team-size thresholds\n  weights: { teamLarge: 25, teamMid: 15, decisionRole: 25, nearTimeline: 25, clearUseCase: 15, demoBooked: 10, fitHigh: 10, fitMedium: 5 },\n  // Roles that can decide or strongly influence the purchase (ES/EN)\n  decisionRoles: /\\b(ceo|coo|cto|cfo|cmo|cro|cio|chief|founder|co-?founder|fundador[a]?|owner|dueñ[oa]|socio|partner|vp|vice ?president|president[ea]?|director[a]?|head|lead|manager|gerente|responsable|jef[ea])\\b/i,\n  // Timelines within ~3 months\n  nearTimeline: /(this|next) (week|month|quarter)|asap|right away|urgent|immediately|in (a|one|two|three|1|2|3) (weeks?|months?)|est[ea] (semana|mes|trimestre)|pr[oó]xim[oa] (semana|mes|trimestre)|cuanto antes|ya mismo|urgente|inmediat|en (una|dos|tres|1|2|3) (semanas?|mes|meses)/i,\n  nearMonths: 3,                                       // a month named by the caller (\"en enero\") counts if it is at most this many months ahead\n  minUseCaseWords: 4                                   // a use case with at least this many words counts as clear\n};\nconst W = SCORING.weights;\nconst reasons = [];                                    // [points, text]\nconst size = parseInt(String(val('team_size')).replace(/\\D/g, '')) || 0;\nif (size >= SCORING.teamLarge) reasons.push([W.teamLarge, `equipo de ${size}`]);\nelse if (size >= SCORING.teamMid) reasons.push([W.teamMid, `equipo de ${size}`]);\nelse reasons.push([0, size ? `equipo pequeño: ${size}` : 'tamaño de equipo desconocido']);\nconst role = String(val('role')).trim();\nreasons.push(SCORING.decisionRoles.test(role) ? [W.decisionRole, `cargo con decisión: ${role}`] : [0, role ? `cargo sin decisión clara: ${role}` : 'cargo desconocido']);\nconst timeline = String(val('timeline')).trim();\nconst MONTHS = ['enero|january|jan', 'febrero|february|feb', 'marzo|march|mar', 'abril|april|apr', 'mayo', 'junio|june|jun', 'julio|july|jul', 'agosto|august|aug', 'septiembre|setiembre|september|sept?', 'octubre|october|oct', 'noviembre|november|nov', 'diciembre|december|dec'];\nconst mi = MONTHS.findIndex(m => new RegExp(`\\\\b(${m})\\\\b`, 'i').test(timeline));\nconst monthsAhead = mi < 0 ? 99 : (mi - new Date().getMonth() + 12) % 12;\nreasons.push(SCORING.nearTimeline.test(timeline) || monthsAhead <= SCORING.nearMonths ? [W.nearTimeline, `plazo cercano: ${timeline}`] : [0, timeline ? `plazo lejano o vago: ${timeline}` : 'sin plazo']);\nconst useCase = String(val('use_case')).trim();\nreasons.push(useCase.split(/\\s+/).filter(Boolean).length >= SCORING.minUseCaseWords ? [W.clearUseCase, 'caso de uso claro'] : [0, 'caso de uso poco claro']);\nif (String(val('demo_booked')).toLowerCase() === 'true') reasons.push([W.demoBooked, 'reservó demo']);\n// Optional: LLM judgement from an ElevenLabs data-collection field \"icp_fit\" (high / medium / low)\nconst fit = String(val('icp_fit')).toLowerCase();\nif (/high|alto/.test(fit)) reasons.push([W.fitHigh, 'encaje alto con el cliente ideal']);\nelse if (/medium|medio/.test(fit)) reasons.push([W.fitMedium, 'encaje medio con el cliente ideal']);\nconst score = Math.min(100, reasons.reduce((t, [p]) => t + p, 0));\nconst tier = score >= SCORING.hot ? 'Caliente' : score >= SCORING.warm ? 'Templado' : 'Frío';\n// Text first, points after: a cell starting with \"+\" would be read as a formula by Google Sheets\nconst scoreReasons = reasons.map(([p, t]) => `${t} (${p ? '+' + p : '0'})`).join(' · ');\n\nconst row = {\n  conversation_id: d.conversation_id || '', date: new Date().toISOString(), duration_s: meta.call_duration_secs || '',\n  language: val('language'), name: val('name'), company: val('company'), role: val('role'), team_size: val('team_size'),\n  use_case: val('use_case'), timeline: val('timeline'), demo_booked: String(val('demo_booked') || ''),\n  score, tier, score_reasons: scoreReasons, summary: String(a.transcript_summary || '').slice(0, 1500), turns: transcript.filter(t => t && t.message).length\n};\n// Monthly usage counter (ElevenLabs free plan = 15 min/month). Persists in workflow static data (production runs).\nconst FREE_MIN = 15;\nconst sd = (typeof $getWorkflowStaticData === 'function') ? $getWorkflowStaticData('global') : {};\nconst month = new Date().toISOString().slice(0, 7);\nif (sd.month !== month) { sd.month = month; sd.seconds = 0; sd.calls = 0; }\nconst isSelfTest = String(d.conversation_id || '').startsWith('selftest');   // self-tests never count towards the quota\nconst isText = meta.text_only === true;                                        // text chats use no voice minutes\nif (!isSelfTest && !isText) {\n  sd.seconds = (sd.seconds || 0) + (Number(meta.call_duration_secs) || 0);\n  sd.calls = (sd.calls || 0) + 1;\n}\nconst usedMin = Math.round(sd.seconds / 6) / 10;\nrow.month_minutes = usedMin;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst text = `${isSelfTest ? '🧪 <b>[AUTOPRUEBA]</b> ' : ''}📞 <b>Nueva llamada · ${tier} (${score})</b>\\n` +\n  `${esc(row.name || 'Sin nombre')} · ${esc(row.role || '?')} · ${esc(row.company || '?')}\\n` +\n  `Equipo: ${esc(row.team_size || '?')} · Plazo: ${esc(row.timeline || '?')} · Demo: ${row.demo_booked === 'true' ? 'sí' : 'no'}` +\n  `\\n<i>Por qué: ${esc(scoreReasons)}</i>` +\n  (row.summary ? `\\n\\n${esc(row.summary.slice(0, 600))}` : '') +\n  `\\n\\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') + (isText && !isSelfTest ? ' · (chat de texto: no cuenta)' : '') +\n  (usedMin >= FREE_MIN * 0.8 ? '\\n⚠️ Quedan pocos minutos: la demo dejará de responder al llegar a 15.' : '');\nreturn [{ json: { row, text } }];\n"
       },
       "id": "61868ec8-9ddd-52ed-a320-de8e088e3273",
       "name": "Post-call",
@@ -28,7 +60,23 @@
       "typeVersion": 2,
       "position": [
         220,
-        0
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ② Guardar y avisar\nArriba: guarda la fila en la pestaña **Leads**. Abajo: brief para el comercial por Telegram (perfil, puntuación, resumen y minutos usados).",
+        "width": 480,
+        "height": 400,
+        "color": 4
+      },
+      "id": "9f72c182-0ce6-56e0-a51b-a48cfc21e9a0",
+      "name": "Stage 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -180
       ]
     },
     {
@@ -40,8 +88,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
-        -100
+        480,
+        -60
       ]
     },
     {
@@ -70,8 +118,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        660,
-        -100
+        700,
+        -60
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -92,8 +140,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        440,
-        100
+        480,
+        120
       ],
       "onError": "continueRegularOutput"
     }

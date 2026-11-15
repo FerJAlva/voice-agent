@@ -28,6 +28,7 @@ Almacenamiento: Google Sheets "Fluxa demo". Sin autenticación de usuarios (demo
 | demo_booked | true/false | |
 | score | 0–100 | BANT-lite |
 | tier | Caliente/Templado/Frío | ≥70 / ≥40 / <40 |
+| score_reasons | string | motivo de cada punto, p. ej. "cargo con decisión: Head of Ops (+25) · equipo pequeño: 3 (0)" |
 | summary | string | resumen de ElevenLabs |
 | turns | number | mensajes en la transcripción |
 | month_minutes | number | minutos de voz acumulados en el mes (control del plan gratuito) |
@@ -35,11 +36,14 @@ Almacenamiento: Google Sheets "Fluxa demo". Sin autenticación de usuarios (demo
 **Relación:** `Leads.email` (v0.4, si se recoge) ↔ `Demos.email`; `Leads.conversation_id` ↔ transcripción en ElevenLabs.
 
 ## Reglas de lead score (BANT-lite)
+Configurables en el objeto `SCORING` del nodo **Post-call** (`src/post_call.js`). Cada regla deja su motivo en `score_reasons` y en el aviso de Telegram.
 - Tamaño de equipo: ≥ 20 → +25; ≥ 5 → +15
-- Rol con capacidad de decisión (director, head, VP, manager, founder…) → +25
-- Plazo este mes/trimestre o próximo → +25
-- Caso de uso descrito (> 15 caracteres) → +15
+- Cargo con decisión (CEO, founder, dueño/a, socio, VP, director/a, head, manager, gerente, responsable, jefe/a…) → +25
+- Plazo cercano: esta/próxima semana, mes o trimestre, "cuanto antes", "en 2 meses", o un mes nombrado a 3 meses o menos → +25
+- Caso de uso claro (4 palabras o más) → +15
 - Demo reservada → +10
+- Opcional: campo `icp_fit` de ElevenLabs (high/medium) → +10 / +5
+- Máximo 100. Caliente ≥ 70, Templado ≥ 40.
 
 ## Si se productiza (v2)
 Supabase/Postgres: `accounts`, `agents`, `calls`, `leads`, `bookings`, `evaluations` con `account_id` en todas las tablas y autenticación por cuenta.

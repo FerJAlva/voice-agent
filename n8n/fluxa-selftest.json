@@ -2,6 +2,38 @@
   "name": "Fluxa Voice Agent · Self-test",
   "nodes": [
     {
+      "parameters": {
+        "content": "## Fluxa · Self-test (prueba del backend sin gastar minutos)\nPulsa **Execute workflow**. Llama a los 3 webhooks con datos de ejemplo y el nodo **Report** dice qué funciona y qué no.\nLa reserva usa prueba@example.com, así que **no se envía email**. Borra luego las filas de prueba (nombre \"Lead de Prueba\") de Demos y Leads.\n**Configurar:** URL base y clave en **Config**.",
+        "width": 900,
+        "height": 220,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ① Preparar → ② Probar los 3 webhooks → ③ Informe\nDisponibilidad → reserva del primer hueco libre → post-call de ejemplo. Si una falla, sigue con la siguiente para ver el cuadro completo.",
+        "width": 1360,
+        "height": 260,
+        "color": 5
+      },
+      "id": "27f0791a-0fc4-5e51-a061-d00ecace4558",
+      "name": "Stage 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -120
+      ]
+    },
+    {
       "parameters": {},
       "id": "893f8e57-2853-50a1-bf31-c4e96f9f5449",
       "name": "Run self-test",
@@ -102,7 +134,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ type: 'post_call_transcription', data: { conversation_id: 'selftest-' + Date.now(), metadata: { call_duration_secs: 95 }, transcript: [{ role: 'agent', message: 'Hola' }, { role: 'user', message: 'Hola' }], analysis: { transcript_summary: 'Prueba automática: lead de ejemplo interesado en automatizar el reporting semanal.', data_collection_results: { name: { value: 'Lead de Prueba' }, company: { value: 'Empresa Demo' }, role: { value: 'Head of Operations' }, team_size: { value: '40' }, use_case: { value: 'Automatizar el reporting semanal de operaciones' }, timeline: { value: 'este trimestre' }, demo_booked: { value: true }, language: { value: 'es' } } } } }) }}",
+        "jsonBody": "={{ JSON.stringify({ type: 'post_call_transcription', data: { conversation_id: 'selftest-' + Date.now(), metadata: { call_duration_secs: 95 }, transcript: [{ role: 'agent', message: 'Hola' }, { role: 'user', message: 'Hola' }], analysis: { transcript_summary: 'Prueba automática: lead de ejemplo interesado en automatizar el reporting semanal.', data_collection_results: { aitem_1: { name: 'name', value: 'Lead de Prueba' }, aitem_2: { name: 'company', value: 'Empresa Demo' }, aitem_3: { name: 'role', value: 'Head of Operations' }, aitem_4: { name: 'team_size', value: '40' }, aitem_5: { name: 'use_case', value: 'Automatizar el reporting semanal de operaciones' }, aitem_6: { name: 'timeline', value: 'este trimestre' }, aitem_7: { name: 'demo_booked', value: true }, aitem_8: { name: 'language', value: 'es' } } } } }) }}",
         "options": {
           "timeout": 20000
         }

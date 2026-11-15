@@ -20,7 +20,7 @@ const RULES = [
     fix: 'Credentials → "Google Sheets account" → Switch account / reconectar, y guarda.' },
   { test: isTg && /(chat not found|bot was blocked|forbidden)/.test(t),
     what: 'Telegram no puede entregar el aviso: chat ID incorrecto o no iniciaste el bot.',
-    fix: 'Abre @fluxa_alerts_syst_bot en Telegram y pulsa Iniciar; comprueba el chat ID 7711362732 en los nodos Notify.' },
+    fix: 'Abre @fluxa_alerts_syst_bot en Telegram y pulsa Iniciar; comprueba el chat ID en los nodos Notify.' },
   { test: isTg && /(401|unauthorized|not found)/.test(t),
     what: 'El token del bot de Fluxa no es válido.',
     fix: 'Copia el token actual en @BotFather (/mybots → fluxa_alerts_syst_bot → API Token) y actualiza la credencial "Fluxa bot".' },

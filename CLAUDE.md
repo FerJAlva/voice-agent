@@ -33,6 +33,8 @@ Posicionamiento: no es "un bot que agenda" sino un **AI SDR de inbound con anal�
 2. Antes de entregar: `node tests/run_tests.js` y regenerar `n8n/*.json`.
 3. Minutos de ElevenLabs limitados: llamadas cortas, pruebas planificadas.
 4. **Costes:** todo cambio que añada un servicio, plan o consumo actualiza `COSTS.md` en el mismo commit.
+5. **n8n:** solo se tocan los workflows "Fluxa Voice Agent" (Tools, Post-call, Error Alert, Self-test). Ningún otro workflow de la instancia se lee, edita ni publica.
+6. **Confirmación previa:** antes de cambiar o publicar cualquier cosa (repo, CLAUDE.md, n8n, ElevenLabs), se muestra el cambio y se espera el OK de Fer.
 
 ## Siguientes pasos
 Ver `docs/specs/06-implementation-plan.md`. Extras fuera del plan: confirmación por email al lead, evento real en Google Calendar, verificación de firma del post-call webhook.

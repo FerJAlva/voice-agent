@@ -2,16 +2,19 @@
 
 Portfolio project by [Fernando Alvarez](https://www.linkedin.com/in/ferjalvarez). **Fluxa is a fictional company.**
 
-Nora answers website visitors by voice, in Spanish or English, understands their needs, qualifies them and books a 30-minute demo in real time. After the call, the lead is scored and saved, and the sales team gets a Telegram alert.
+Nora answers website visitors by voice, in Spanish or English, understands their needs, qualifies them and books a 30-minute demo in real time. After the call, the lead is scored and saved, the lead gets a branded confirmation email with a one-click calendar link, and the sales team gets a Telegram alert.
 
 **Try it:** `https://ferjalva.github.io/fluxa/` (short calls, limited monthly minutes) · **Video:** _coming soon_
+
+> **Para clientes:** qué hace y con qué se conecta → [`docs/producto.md`](docs/producto.md)
 
 ## How it works
 ```
 Visitor ──voice──► ElevenLabs agent (STT · LLM · TTS · knowledge base)
                       │ tools (webhooks)
                       ├─► n8n /fluxa-availability → free slots (Mon–Fri 10–17 Madrid, minus booked)
-                      └─► n8n /fluxa-book        → validates & saves the booking (Google Sheets) → Telegram
+                      ├─► n8n /fluxa-book        → validates & saves the booking (Google Sheets) → Telegram
+                      │                             └─► branded confirmation email + "Add to Google Calendar"
                    post-call webhook
                       └─► n8n /fluxa-post-call   → summary + collected data → lead score (BANT-lite) → Sheets + Telegram
 ```
@@ -23,7 +26,7 @@ Visitor ──voice──► ElevenLabs agent (STT · LLM · TTS · knowledge ba
 - Bilingual (ES/EN) with language detection.
 
 ## Stack
-ElevenLabs Agents · n8n · Google Sheets · Telegram · plain HTML (GitHub Pages)
+ElevenLabs Agents · n8n · Google Sheets · Gmail · Telegram · plain HTML (GitHub Pages)
 
 ## Product docs
 [PRD](docs/specs/01-prd.md) · [TRD](docs/specs/02-trd.md) · [Flows](docs/specs/03-flows.md) · [Design brief](docs/specs/04-design-brief.md) · [Data schema](docs/specs/05-data-schema.md) · [Implementation plan](docs/specs/06-implementation-plan.md) · [Market research](docs/market-research.md) · [Client delivery](docs/client-delivery.md)
