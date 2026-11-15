@@ -40,7 +40,7 @@ ok(pc2.row.name === 'Luis Gil' && pc2.row.company === 'Gil SL' && pc2.row.team_s
 ok(pc2.row.month_minutes === 2.4 && /chat de texto/.test(pc2.text), 'text-only chats do not count towards the monthly minutes');
 
 // Confirmation email
-const runAll = (file, nodes) => new Function('$', fs.readFileSync(S + file, 'utf8'))((n) => ({ first: () => ({ json: nodes[n][0] }) }));
+const runAll = (file, nodes) => new Function("$", "URLSearchParams", fs.readFileSync(S + file, 'utf8'))((n) => ({ first: () => ({ json: nodes[n][0] }) }));
 const em = runAll('confirm_email.js', { 'Book': [good] })[0].json;
 const gd = decodeURIComponent((em.gcal_url.match(/dates=([^&]+)/) || [])[1] || '');
 const startUtc = new Date(good.row.slot_iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');

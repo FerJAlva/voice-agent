@@ -7,6 +7,8 @@
 - Prompt: Nora pide nombre, email y empresa de uno en uno; ya no promete una guía por email que no existe.
 - Notas por etapas (sticky notes) en los 4 workflows de n8n para entenderlos sin abrir nodos.
 - Autoprueba con el formato nuevo del post-call. Quitado un chat ID real de un texto de ayuda.
+- Email: enlaces de calendario sin `URLSearchParams` (no existe en el sandbox de Code de n8n); la prueba lo simula.
+- Webhooks protegidos con `x-demo-key` (secreto en ElevenLabs y n8n).
 - `docs/review-2026-11.md`: revisión del proyecto y recomendaciones para convertirlo en plantilla vendible.
 
 ## v0.4 — 2026-10-18

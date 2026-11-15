@@ -68,13 +68,15 @@ const T = {
 const utc = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 const title = `${CONFIG.brand} · Demo${r.company ? ' · ' + r.company : ''}`;
 const details = [T.calDetails, r.use_case ? `${T.yourCase}: ${r.use_case}` : '', CONFIG.meetingUrl].filter(Boolean).join('\n');
-const gcalUrl = 'https://calendar.google.com/calendar/render?' + new URLSearchParams({
+// n8n's Code sandbox has no URLSearchParams, so build query strings by hand
+const qs = (o) => Object.entries(o).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+const gcalUrl = 'https://calendar.google.com/calendar/render?' + qs({
   action: 'TEMPLATE', text: title, dates: `${utc(start)}/${utc(end)}`, details, location: CONFIG.meetingUrl || 'Online', ctz: CONFIG.timezone
-}).toString();
-const outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?' + new URLSearchParams({
+});
+const outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?' + qs({
   path: '/calendar/action/compose', rru: 'addevent', subject: title, startdt: start.toISOString(), enddt: end.toISOString(),
   body: details, location: CONFIG.meetingUrl || 'Online'
-}).toString();
+});
 
 const C = CONFIG.colors;
 const font = "'Helvetica Neue', Helvetica, Arial, sans-serif";
