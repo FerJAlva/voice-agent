@@ -1,0 +1,174 @@
+{
+  "name": "Fluxa Voice Agent · Notify",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Fluxa · Avisar (conector de avisos al equipo)\nEntrada: `{ provider, chat_id, text }` (texto con HTML simple: <b>, <i>). Salida: `{ ok }`.\n**Proveedores:** `telegram` · `none` (no avisa).\n**Añadir otro (Slack, Teams, email):** una salida más en **Route**. Un aviso que falla no para la reserva.",
+        "width": 860,
+        "height": 260,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b85863b8-6ed0-5403-9001-1d1c02cced58",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "80668413-8f6a-5ec8-a874-cd69c1554caa",
+                    "leftValue": "={{ $json.provider }}",
+                    "rightValue": "telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telegram"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "otro"
+        }
+      },
+      "id": "f8142440-461f-5718-99f9-f543ef363962",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Start').first().json.chat_id }}",
+        "text": "={{ $('Start').first().json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0139935d-f48a-5c77-8e75-7138d25f6ff2",
+      "name": "Send (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        -60
+      ],
+      "onError": "continueRegularOutput",
+      "webhookId": "86d2fdcc-6a6d-54e1-bcbe-2c79fa33aa8a"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: !$input.first().json.error, provider: 'telegram' } }];"
+      },
+      "id": "4e34f38e-df49-5bc2-9d70-2d60db246c1c",
+      "name": "Sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true, skipped: true, provider: $('Start').first().json.provider } }];"
+      },
+      "id": "21086fcb-11dd-5e9e-bc9a-8cfe278a9021",
+      "name": "Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Send (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}

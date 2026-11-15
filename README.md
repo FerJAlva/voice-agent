@@ -35,4 +35,4 @@ ElevenLabs Agents · n8n · Google Sheets · Gmail · Telegram · plain HTML (Gi
 Runs at **0 €/month** on free tiers. See [COSTS.md](COSTS.md).
 
 ## Repo
-`agent/` agent configuration · `src/` n8n code nodes · `n8n/` importable workflows · `web/` demo page · `docs/` setup and test scenarios · `tests/` offline tests.
+`agent/` agent configuration · `src/` n8n code nodes · `n8n/` importable workflows (Tools and Post-call + Config and 4 swappable connectors: Agenda, Store, Notify, Email) · `web/` demo page · `docs/` setup and test scenarios · `tests/` offline tests.

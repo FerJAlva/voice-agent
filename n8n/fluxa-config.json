@@ -1,0 +1,67 @@
+{
+  "name": "Fluxa Voice Agent · Config",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Fluxa · Config (único sitio a editar por cliente)\nMarca, horario, puntuación y **qué herramienta hace cada función** (agenda, guardar, avisar, email). Tools y Post-call lo llaman al empezar.\n**Configurar:** edita el nodo **Config** (clave x-demo-key, ID de la hoja, chat de Telegram, proveedor de cada conector).",
+        "width": 640,
+        "height": 260,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b85863b8-6ed0-5403-9001-1d1c02cced58",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA · CONFIG  (sub-workflow \"Fluxa Voice Agent · Config\")\n// The ONLY place to edit per client: brand, schedule, scoring and which tool does each job.\n// Tools and Post-call call this sub-workflow first and read everything from here.\n// Values marked REPLACE/CHANGE_ME are set in n8n only (never commit real ids or keys).\n// ============================================================\nconst CONFIG = {\n  brand: {\n    name: 'Fluxa', agent: 'Nora', sender_name: 'Nora · Fluxa',\n    tagline: { es: 'Automatización de flujos con IA para equipos de operaciones', en: 'AI workflow automation for operations teams' },\n    colors: { brand: '#0E5C4E', accent: '#8EDCC4', bg: '#EEF3F1', ink: '#15302B', muted: '#4F6862', line: '#CFDDD8' },\n    demo_disclaimer: true          // portfolio demo: the email says Fluxa is fictional. false for a real client.\n  },\n  security: {\n    demo_key: 'CHANGE_ME_IN_N8N'   // must match the x-demo-key header of the ElevenLabs tools. Left as is = no check.\n  },\n  schedule: {\n    timezone: 'Europe/Madrid',\n    weekdays: [1, 2, 3, 4, 5],     // 0 = Sunday … 6 = Saturday\n    start_hour: 10, end_hour: 17,  // first slot starts at start_hour, last one ends at end_hour\n    slot_minutes: 30,              // meeting length\n    min_notice_hours: 2,           // no slots sooner than this\n    horizon_days: 14,              // how far ahead to look\n    max_offers: 4,                 // slots offered to the lead\n    spread_hours: 3                // minimum gap between offered slots, so they are spread out\n  },\n  scoring: {                       // see docs/adaptar-a-clientes.md · patterns are regex strings (case-insensitive)\n    hot: 70, warm: 40, team_large: 20, team_mid: 5,\n    weights: { teamLarge: 25, teamMid: 15, decisionRole: 25, nearTimeline: 25, clearUseCase: 15, demoBooked: 10, fitHigh: 10, fitMedium: 5 },\n    near_months: 3, min_use_case_words: 4\n    // decision_roles: '\\\\b(ceo|founder|director|head)\\\\b',   // optional: replaces the built-in list\n    // near_timeline: 'this month|este mes',                    // optional: replaces the built-in list\n  },\n  connectors: {\n    // Which tool does each job. Every option is a branch in the matching sub-workflow.\n    agenda: { provider: 'sheets', calendar_id: 'primary' },     // 'sheets' (booked slots in the Demos tab) | 'google_calendar' (free/busy + event with Meet)\n    store:  { provider: 'sheets', sheet_id: 'REPLACE_WITH_FLUXA_SHEET_ID', demos_tab: 'Demos', leads_tab: 'Leads' },   // 'sheets'\n    notify: { provider: 'telegram', chat_id: 'REPLACE_WITH_TELEGRAM_CHAT_ID' },                                        // 'telegram' | 'none'\n    email:  { provider: 'gmail', skip_domains: ['example.com', 'example.org', 'test.com'] }                            // 'gmail' | 'none'\n  },\n  usage: { free_minutes: 15 }      // ElevenLabs minutes per month shown in the post-call brief (0 = hide)\n};\nreturn [{ json: CONFIG }];\n"
+      },
+      "id": "507edd36-dd7b-5e0b-a50a-d1c113f3ce6e",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}

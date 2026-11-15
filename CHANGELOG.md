@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.7 — 2026-11-15
+- **Conectores intercambiables.** Tools y Post-call ya no llevan herramientas dentro: leen el sub-workflow **Config** (`src/config.js`: marca, horario, puntuación, clave `x-demo-key`, IDs y qué herramienta hace cada función) y llaman a 4 sub-workflows con entrada y salida fijas: **Agenda** (huecos ocupados + crear reunión), **Store** (guardar), **Notify** (avisar) y **Email**. Cambiar de herramienta = cambiar Config o añadir una salida en el conector, sin tocar el resto.
+- **Conector Google Calendar con Google Meet** en Agenda: disponibilidad desde el calendario real (cualquier evento bloquea, no solo coincidencias exactas), evento con el lead invitado y enlace de Meet, botón "Unirse a la videollamada" en el email y enlace en el aviso. Viene desactivado hasta conectar la credencial; si está apagado y se elige, falla con un aviso claro en vez de ofrecer todos los huecos.
+- Horario configurable (días, horas, duración, antelación, horizonte, nº de huecos) y comprobación de solapes por intervalo.
+- Demos: columnas nuevas `meet_url` y `event_id`. Textos del email y del aviso sin "Nora", "Fluxa" ni "Madrid" fijos: salen de Config.
+- 16 pruebas nuevas (39 en total). Autoprueba en producción 3/3 OK y reserva real con email y aviso.
+
 ## v0.6 — 2026-11-15
 - **Puntuación explicada y configurable:** objeto `SCORING` en el nodo Post-call; cada punto deja su motivo en la columna nueva `score_reasons` de Leads y en Telegram ("Por qué: …"). Detecta más cargos (dueño/a, VP, gerente…) y plazos ("en enero" si está a 3 meses o menos). Campo opcional `icp_fit`.
 - Docs de venta: `docs/producto.md` (página para clientes), `docs/vender.md` (dónde publicar, paquetes, precios, mantenimiento) y `docs/adaptar-a-clientes.md` (cuestionario de descubrimiento y conectores).

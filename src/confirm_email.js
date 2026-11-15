@@ -1,22 +1,29 @@
 // ============================================================
-// FLUXA DEMO · CONFIRMATION EMAIL  (runs after the booking is saved)
-// Builds a branded HTML email (ES/EN) with "Add to Google Calendar" and Outlook links.
-// Output: { to, subject, html } for the Gmail node. Returns no items (= no email) when the
-// booking failed or the address is a test one (self-test), so nothing is sent by mistake.
+// FLUXA · CONFIRMATION EMAIL  (runs after Nora has the answer)
+// Builds a branded HTML email (ES/EN) with "Add to Google Calendar" and Outlook links,
+// and the video-call button when the agenda connector created a meeting (Google Meet).
+// Output: { provider, to, subject, html, sender_name } for the Email sub-workflow. Returns no items
+// (= no email) when the booking failed, the email connector is 'none' or the address is a test one.
+// Brand, colours and schedule come from the Config sub-workflow.
 // ============================================================
+const cfg = $('Config').first().json;
+const B = cfg.brand || {}, EM = (cfg.connectors || {}).email || {};
+let ev = {};
+try { ev = $('Create Event').first().json || {}; } catch (e) { ev = {}; }
 const CONFIG = {
-  brand: 'Fluxa',
-  tagline: { es: 'Automatización de flujos con IA para equipos de operaciones', en: 'AI workflow automation for operations teams' },
-  durationMin: 30,
-  timezone: 'Europe/Madrid',
-  meetingUrl: '',                 // video-call link; empty = the email says the link arrives before the demo
-  demoDisclaimer: true,           // portfolio demo: says Fluxa is fictional. Set false for a real client.
-  skipDomains: ['example.com', 'example.org', 'test.com'],
-  colors: { brand: '#0E5C4E', accent: '#8EDCC4', bg: '#EEF3F1', ink: '#15302B', muted: '#4F6862', line: '#CFDDD8' }
+  brand: B.name || 'Fluxa',
+  agent: B.agent || 'Nora',
+  tagline: B.tagline || { es: '', en: '' },
+  durationMin: cfg.schedule.slot_minutes,
+  timezone: cfg.schedule.timezone,
+  meetingUrl: ev.meet_url || '',  // video-call link from the agenda connector; empty = the email says the link arrives before the demo
+  demoDisclaimer: B.demo_disclaimer !== false,
+  skipDomains: EM.skip_domains || ['example.com'],
+  colors: B.colors
 };
 
 const book = $('Book').first().json;
-if (!book.ok || !book.row) return [];
+if (!book.ok || !book.row || !EM.provider || EM.provider === 'none') return [];
 const r = book.row;
 const to = String(r.email || '').trim().toLowerCase();
 if (!to || CONFIG.skipDomains.some(d => to.endsWith('@' + d))) return [];
@@ -31,33 +38,34 @@ const timeLine = `${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)} �
 const firstName = String(r.name || '').trim().split(/\s+/)[0] || '';
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+const city = CONFIG.timezone.split('/').pop().replace(/_/g, ' ');
 const T = {
   es: {
     subject: `Tu demo de ${CONFIG.brand} está confirmada · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,
-    preheader: `${dateLine} · ${timeLine} (hora de Madrid). Añádela a tu calendario con un clic.`,
+    preheader: `${dateLine} · ${timeLine} (hora de ${city}). Añádela a tu calendario con un clic.`,
     hello: firstName ? `¡Hola, ${firstName}!` : '¡Hola!',
     title: 'Tu demo está confirmada',
-    intro: `Gracias por hablar con Nora. Hemos reservado ${CONFIG.durationMin} minutos con un especialista de ${CONFIG.brand} para ver tu caso en directo.`,
-    when: 'Cuándo', tz: 'hora de Madrid', format: `Online · ${CONFIG.durationMin} min · con un especialista`,
+    intro: `Gracias por hablar con ${CONFIG.agent}. Hemos reservado ${CONFIG.durationMin} minutos con un especialista de ${CONFIG.brand} para ver tu caso en directo.`,
+    when: 'Cuándo', tz: `hora de ${city}`, format: `Online · ${CONFIG.durationMin} min · con un especialista`,
     gcal: 'Añadir a Google Calendar', outlook: 'Outlook / otro calendario', join: 'Unirse a la videollamada',
     linkLater: 'Te enviaremos el enlace de la videollamada antes de la demo.',
     agenda: 'Qué veremos', yourCase: 'Tu caso', company: 'Empresa',
-    items: ['Tu flujo de trabajo actual y dónde se pierde tiempo.', 'Un ejemplo en vivo de Fluxa resolviendo un caso parecido.', 'Próximos pasos y cómo sería la puesta en marcha.'],
+    items: ['Tu flujo de trabajo actual y dónde se pierde tiempo.', `Un ejemplo en vivo de ${CONFIG.brand} resolviendo un caso parecido.`, 'Próximos pasos y cómo sería la puesta en marcha.'],
     change: '¿Necesitas cambiar la hora? Responde a este email y lo movemos.',
     disclaimer: `${CONFIG.brand} es una empresa ficticia: este email forma parte de una demo de portfolio de un agente de voz con IA. No habrá una reunión real.`,
     calDetails: `Demo de ${CONFIG.brand} (${CONFIG.durationMin} min) con un especialista.`
   },
   en: {
     subject: `Your ${CONFIG.brand} demo is confirmed · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,
-    preheader: `${dateLine} · ${timeLine} (Madrid time). Add it to your calendar in one click.`,
+    preheader: `${dateLine} · ${timeLine} (${city} time). Add it to your calendar in one click.`,
     hello: firstName ? `Hi ${firstName},` : 'Hi,',
     title: 'Your demo is confirmed',
-    intro: `Thanks for talking to Nora. We have booked ${CONFIG.durationMin} minutes with a ${CONFIG.brand} specialist to walk through your use case live.`,
-    when: 'When', tz: 'Madrid time', format: `Online · ${CONFIG.durationMin} min · with a specialist`,
+    intro: `Thanks for talking to ${CONFIG.agent}. We have booked ${CONFIG.durationMin} minutes with a ${CONFIG.brand} specialist to walk through your use case live.`,
+    when: 'When', tz: `${city} time`, format: `Online · ${CONFIG.durationMin} min · with a specialist`,
     gcal: 'Add to Google Calendar', outlook: 'Outlook / other calendar', join: 'Join the video call',
     linkLater: 'We will send you the video-call link before the demo.',
     agenda: 'What we will cover', yourCase: 'Your use case', company: 'Company',
-    items: ['Your current workflow and where time gets lost.', 'A live example of Fluxa solving a similar case.', 'Next steps and what a rollout would look like.'],
+    items: ['Your current workflow and where time gets lost.', `A live example of ${CONFIG.brand} solving a similar case.`, 'Next steps and what a rollout would look like.'],
     change: 'Need a different time? Reply to this email and we will move it.',
     disclaimer: `${CONFIG.brand} is a fictional company: this email is part of a portfolio demo of an AI voice agent. There will be no real meeting.`,
     calDetails: `${CONFIG.brand} demo (${CONFIG.durationMin} min) with a specialist.`
@@ -140,7 +148,7 @@ const html = `<!doctype html>
         </table>
       </td></tr></table>
       <p style="margin:18px 0 0;font:14px ${font};color:${C.ink};">${esc(T.change)}</p>
-      <p style="margin:18px 0 0;font:14px ${font};color:${C.ink};">— Nora · ${esc(CONFIG.brand)}</p>
+      <p style="margin:18px 0 0;font:14px ${font};color:${C.ink};">— ${esc(CONFIG.agent)} · ${esc(CONFIG.brand)}</p>
     </td></tr>
     <!-- footer -->
     <tr><td style="background:${C.ink};border-radius:0 0 16px 16px;padding:18px 32px;">
@@ -151,4 +159,4 @@ const html = `<!doctype html>
 </td></tr></table>
 </body></html>`;
 
-return [{ json: { to, subject: T.subject, html, gcal_url: gcalUrl, outlook_url: outlookUrl } }];
+return [{ json: { provider: EM.provider, to, subject: T.subject, html, sender_name: B.sender_name || `${CONFIG.agent} · ${CONFIG.brand}`, gcal_url: gcalUrl, outlook_url: outlookUrl } }];
