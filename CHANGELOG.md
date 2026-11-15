@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5 — 2026-11-15
+- **Email de confirmación al lead** (`src/confirm_email.js` + nodo Gmail): diseño Fluxa en ES/EN, fecha y hora, botones "Añadir a Google Calendar" y "Outlook / otro calendario". Se envía después de responder a Nora (no retrasa la llamada); no se envía si la reserva falla o el email es de prueba; si Gmail falla, aviso por Telegram.
+- Post-call: lee el formato actual de ElevenLabs (resultados por `aitem_…` con el identificador en `name`, sin distinguir mayúsculas). Antes la fila de Leads llegaba vacía.
+- Contador de minutos: los chats de texto ya no suman (no gastan minutos de voz).
+- Prompt: Nora pide nombre, email y empresa de uno en uno; ya no promete una guía por email que no existe.
+- Notas por etapas (sticky notes) en los 4 workflows de n8n para entenderlos sin abrir nodos.
+- Autoprueba con el formato nuevo del post-call. Quitado un chat ID real de un texto de ayuda.
+- `docs/review-2026-11.md`: revisión del proyecto y recomendaciones para convertirlo en plantilla vendible.
+
 ## v0.4 — 2026-10-18
 - Las autopruebas no suman minutos al contador mensual y se marcan como [AUTOPRUEBA] en Telegram.
 - Avisos de error probados en producción (pestaña inexistente → aviso con causa y solución).

@@ -7,7 +7,12 @@ const req = $('Post-call Webhook').first().json;
 const p = req.body || {};
 const d = p.data || p;
 const a = d.analysis || {};
-const dc = a.data_collection_results || {};
+// ElevenLabs keys each result by an internal id (aitem_…) and puts the identifier in x.name.
+// Older payloads keyed them by identifier. Index by identifier (lower case) so both work.
+const dc = {};
+for (const [k, x] of Object.entries(a.data_collection_results || {})) {
+  dc[String((x && typeof x === 'object' && x.name) || k).trim().toLowerCase()] = x;
+}
 const val = (k) => { const x = dc[k]; return x == null ? '' : (typeof x === 'object' ? (x.value ?? '') : x); };
 const transcript = Array.isArray(d.transcript) ? d.transcript : [];
 const meta = d.metadata || {};
@@ -33,7 +38,8 @@ const sd = (typeof $getWorkflowStaticData === 'function') ? $getWorkflowStaticDa
 const month = new Date().toISOString().slice(0, 7);
 if (sd.month !== month) { sd.month = month; sd.seconds = 0; sd.calls = 0; }
 const isSelfTest = String(d.conversation_id || '').startsWith('selftest');   // self-tests never count towards the quota
-if (!isSelfTest) {
+const isText = meta.text_only === true;                                        // text chats use no voice minutes
+if (!isSelfTest && !isText) {
   sd.seconds = (sd.seconds || 0) + (Number(meta.call_duration_secs) || 0);
   sd.calls = (sd.calls || 0) + 1;
 }
@@ -44,6 +50,6 @@ const text = `${isSelfTest ? '🧪 <b>[AUTOPRUEBA]</b> ' : ''}📞 <b>Nueva llam
   `${esc(row.name || 'Sin nombre')} · ${esc(row.role || '?')} · ${esc(row.company || '?')}\n` +
   `Equipo: ${esc(row.team_size || '?')} · Plazo: ${esc(row.timeline || '?')} · Demo: ${row.demo_booked === 'true' ? 'sí' : 'no'}` +
   (row.summary ? `\n\n${esc(row.summary.slice(0, 600))}` : '') +
-  `\n\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') +
+  `\n\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') + (isText && !isSelfTest ? ' · (chat de texto: no cuenta)' : '') +
   (usedMin >= FREE_MIN * 0.8 ? '\n⚠️ Quedan pocos minutos: la demo dejará de responder al llegar a 15.' : '');
 return [{ json: { row, text } }];

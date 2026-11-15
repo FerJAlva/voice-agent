@@ -3,6 +3,38 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## Fluxa · Tools (herramientas de Nora)\nDos webhooks que llama el agente de ElevenLabs durante la llamada:\n- **POST /webhook/fluxa-availability** → huecos libres para la demo\n- **POST /webhook/fluxa-book** → reserva, avisa al equipo y manda el email al lead\n\n**Configurar:** ID de la hoja en los 3 nodos de Sheets · chat ID en los nodos de Telegram · credenciales de Google Sheets, Telegram y Gmail · Publish.\nReglas de agenda (horario, días, antelación) en el nodo **Availability**; textos y diseño del email en **Confirmation Email**.",
+        "width": 900,
+        "height": 320,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -520
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ① Consultar disponibilidad\nRecibe la petición de Nora, lee las demos ya reservadas en la hoja y calcula los huecos libres (lun–vie, 10:00–17:00 Madrid, 30 min, 2 h de antelación). Responde con hasta 4 huecos.",
+        "width": 900,
+        "height": 300,
+        "color": 5
+      },
+      "id": "27f0791a-0fc4-5e51-a061-d00ecace4558",
+      "name": "Stage 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ]
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "fluxa-availability",
         "responseMode": "responseNode",
@@ -14,7 +46,7 @@
       "typeVersion": 2,
       "position": [
         0,
-        0
+        20
       ],
       "webhookId": "dc6796a2-f4d1-584b-9a6e-e4fe953f9793"
     },
@@ -40,7 +72,7 @@
       "typeVersion": 4.5,
       "position": [
         220,
-        0
+        20
       ],
       "alwaysOutputData": true,
       "executeOnce": true,
@@ -56,7 +88,7 @@
       "typeVersion": 2,
       "position": [
         440,
-        0
+        20
       ]
     },
     {
@@ -71,7 +103,23 @@
       "typeVersion": 1.1,
       "position": [
         660,
-        0
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ② Recibir y validar la reserva\nDatos del lead + hueco elegido. **Book** comprueba campos, email y que el hueco siga libre. Si algo falla, va directo a ④ con un mensaje para que Nora lo diga.",
+        "width": 900,
+        "height": 320,
+        "color": 5
+      },
+      "id": "9f72c182-0ce6-56e0-a51b-a48cfc21e9a0",
+      "name": "Stage 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        300
       ]
     },
     {
@@ -87,7 +135,7 @@
       "typeVersion": 2,
       "position": [
         0,
-        300
+        460
       ],
       "webhookId": "cf2a2529-f07d-5e76-acd2-6fb0274dede1"
     },
@@ -113,7 +161,7 @@
       "typeVersion": 4.5,
       "position": [
         220,
-        300
+        460
       ],
       "alwaysOutputData": true,
       "executeOnce": true,
@@ -129,7 +177,7 @@
       "typeVersion": 2,
       "position": [
         440,
-        300
+        460
       ]
     },
     {
@@ -163,6 +211,22 @@
       "typeVersion": 2.2,
       "position": [
         660,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ③ Guardar y avisar al equipo\nAñade la fila a la pestaña **Demos** (3 reintentos; si falla salta el aviso de error) y manda el aviso de Telegram al equipo comercial.",
+        "width": 680,
+        "height": 320,
+        "color": 4
+      },
+      "id": "1095484e-36dd-5641-81e5-3d301e977119",
+      "name": "Stage 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        860,
         300
       ]
     },
@@ -175,8 +239,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        880,
-        200
+        920,
+        460
       ]
     },
     {
@@ -205,8 +269,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1100,
-        200
+        1140,
+        460
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -227,10 +291,26 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1320,
-        200
+        1360,
+        460
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "### ④ Responder a Nora\nDevuelve `ok` y la frase `say` que Nora lee al lead.",
+        "width": 260,
+        "height": 320,
+        "color": 6
+      },
+      "id": "91e0c151-d6bb-5798-a562-646cd4ce7f64",
+      "name": "Stage 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -243,24 +323,84 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1540,
+        1620,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ⑤ Email de confirmación al lead\nSe ejecuta **después** de responder a Nora, así no retrasa la llamada. Diseño Fluxa (ES/EN) con botones de Google Calendar y Outlook. No se envía si la reserva falló o el email es de prueba (@example.com). Si Gmail falla, avisa por Telegram.",
+        "width": 700,
+        "height": 480,
+        "color": 2
+      },
+      "id": "49f5a9ad-4cbd-5b84-b32c-77ace843eeb7",
+      "name": "Stage 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1840,
         300
       ]
     },
     {
       "parameters": {
-        "content": "## Fluxa voice agent · Tools\nTwo webhooks called by the ElevenLabs agent:\n- POST /webhook/fluxa-availability → free demo slots\n- POST /webhook/fluxa-book → books a slot in the **Demos** tab\nSet the Sheet ID in the 3 Sheets nodes, the Telegram chat ID and credentials. Publish.",
-        "height": 220,
-        "width": 460
+        "jsCode": "// ============================================================\n// FLUXA DEMO · CONFIRMATION EMAIL  (runs after the booking is saved)\n// Builds a branded HTML email (ES/EN) with \"Add to Google Calendar\" and Outlook links.\n// Output: { to, subject, html } for the Gmail node. Returns no items (= no email) when the\n// booking failed or the address is a test one (self-test), so nothing is sent by mistake.\n// ============================================================\nconst CONFIG = {\n  brand: 'Fluxa',\n  tagline: { es: 'Automatización de flujos con IA para equipos de operaciones', en: 'AI workflow automation for operations teams' },\n  durationMin: 30,\n  timezone: 'Europe/Madrid',\n  meetingUrl: '',                 // video-call link; empty = the email says the link arrives before the demo\n  demoDisclaimer: true,           // portfolio demo: says Fluxa is fictional. Set false for a real client.\n  skipDomains: ['example.com', 'example.org', 'test.com'],\n  colors: { brand: '#0E5C4E', accent: '#8EDCC4', bg: '#EEF3F1', ink: '#15302B', muted: '#4F6862', line: '#CFDDD8' }\n};\n\nconst book = $('Book').first().json;\nif (!book.ok || !book.row) return [];\nconst r = book.row;\nconst to = String(r.email || '').trim().toLowerCase();\nif (!to || CONFIG.skipDomains.some(d => to.endsWith('@' + d))) return [];\n\nconst lang = r.language === 'en' ? 'en' : 'es';\nconst start = new Date(r.slot_iso);\nconst end = new Date(start.getTime() + CONFIG.durationMin * 60000);\nconst fmt = (opts) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: CONFIG.timezone, ...opts });\nconst cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);\nconst dateLine = cap(fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(start));\nconst timeLine = `${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)} – ${fmt({ hour: '2-digit', minute: '2-digit' }).format(end)}`;\nconst firstName = String(r.name || '').trim().split(/\\s+/)[0] || '';\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\n\nconst T = {\n  es: {\n    subject: `Tu demo de ${CONFIG.brand} está confirmada · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,\n    preheader: `${dateLine} · ${timeLine} (hora de Madrid). Añádela a tu calendario con un clic.`,\n    hello: firstName ? `¡Hola, ${firstName}!` : '¡Hola!',\n    title: 'Tu demo está confirmada',\n    intro: `Gracias por hablar con Nora. Hemos reservado ${CONFIG.durationMin} minutos con un especialista de ${CONFIG.brand} para ver tu caso en directo.`,\n    when: 'Cuándo', tz: 'hora de Madrid', format: `Online · ${CONFIG.durationMin} min · con un especialista`,\n    gcal: 'Añadir a Google Calendar', outlook: 'Outlook / otro calendario', join: 'Unirse a la videollamada',\n    linkLater: 'Te enviaremos el enlace de la videollamada antes de la demo.',\n    agenda: 'Qué veremos', yourCase: 'Tu caso', company: 'Empresa',\n    items: ['Tu flujo de trabajo actual y dónde se pierde tiempo.', 'Un ejemplo en vivo de Fluxa resolviendo un caso parecido.', 'Próximos pasos y cómo sería la puesta en marcha.'],\n    change: '¿Necesitas cambiar la hora? Responde a este email y lo movemos.',\n    disclaimer: `${CONFIG.brand} es una empresa ficticia: este email forma parte de una demo de portfolio de un agente de voz con IA. No habrá una reunión real.`,\n    calDetails: `Demo de ${CONFIG.brand} (${CONFIG.durationMin} min) con un especialista.`\n  },\n  en: {\n    subject: `Your ${CONFIG.brand} demo is confirmed · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,\n    preheader: `${dateLine} · ${timeLine} (Madrid time). Add it to your calendar in one click.`,\n    hello: firstName ? `Hi ${firstName},` : 'Hi,',\n    title: 'Your demo is confirmed',\n    intro: `Thanks for talking to Nora. We have booked ${CONFIG.durationMin} minutes with a ${CONFIG.brand} specialist to walk through your use case live.`,\n    when: 'When', tz: 'Madrid time', format: `Online · ${CONFIG.durationMin} min · with a specialist`,\n    gcal: 'Add to Google Calendar', outlook: 'Outlook / other calendar', join: 'Join the video call',\n    linkLater: 'We will send you the video-call link before the demo.',\n    agenda: 'What we will cover', yourCase: 'Your use case', company: 'Company',\n    items: ['Your current workflow and where time gets lost.', 'A live example of Fluxa solving a similar case.', 'Next steps and what a rollout would look like.'],\n    change: 'Need a different time? Reply to this email and we will move it.',\n    disclaimer: `${CONFIG.brand} is a fictional company: this email is part of a portfolio demo of an AI voice agent. There will be no real meeting.`,\n    calDetails: `${CONFIG.brand} demo (${CONFIG.durationMin} min) with a specialist.`\n  }\n}[lang];\n\n// Calendar links (UTC times, so they land at the right local time for anyone)\nconst utc = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '');\nconst title = `${CONFIG.brand} · Demo${r.company ? ' · ' + r.company : ''}`;\nconst details = [T.calDetails, r.use_case ? `${T.yourCase}: ${r.use_case}` : '', CONFIG.meetingUrl].filter(Boolean).join('\\n');\nconst gcalUrl = 'https://calendar.google.com/calendar/render?' + new URLSearchParams({\n  action: 'TEMPLATE', text: title, dates: `${utc(start)}/${utc(end)}`, details, location: CONFIG.meetingUrl || 'Online', ctz: CONFIG.timezone\n}).toString();\nconst outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?' + new URLSearchParams({\n  path: '/calendar/action/compose', rru: 'addevent', subject: title, startdt: start.toISOString(), enddt: end.toISOString(),\n  body: details, location: CONFIG.meetingUrl || 'Online'\n}).toString();\n\nconst C = CONFIG.colors;\nconst font = \"'Helvetica Neue', Helvetica, Arial, sans-serif\";\nconst button = (href, label, primary) => `\n  <a href=\"${esc(href)}\" target=\"_blank\" style=\"display:inline-block;padding:14px 22px;border-radius:10px;font:600 15px ${font};text-decoration:none;${primary\n    ? `background:${C.brand};color:#ffffff;` : `background:#ffffff;color:${C.brand};border:1px solid ${C.line};`}\">${esc(label)}</a>`;\nconst row = (label, value) => value ? `\n  <tr><td style=\"padding:6px 0;font:13px ${font};color:${C.muted};width:110px;vertical-align:top;\">${esc(label)}</td>\n      <td style=\"padding:6px 0;font:14px ${font};color:${C.ink};\">${esc(value)}</td></tr>` : '';\n\nconst html = `<!doctype html>\n<html lang=\"${lang}\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<meta name=\"color-scheme\" content=\"light\"><title>${esc(T.title)}</title></head>\n<body style=\"margin:0;padding:0;background:${C.bg};\">\n<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">${esc(T.preheader)}</div>\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:${C.bg};\">\n<tr><td align=\"center\" style=\"padding:32px 16px;\">\n  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;\">\n    <!-- header -->\n    <tr><td style=\"background:${C.brand};border-radius:16px 16px 0 0;padding:28px 32px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n        <td style=\"font:700 24px ${font};color:#ffffff;letter-spacing:-0.5px;\">${esc(CONFIG.brand)}<span style=\"color:${C.accent};\">.</span></td>\n        <td align=\"right\" style=\"font:12px ${font};color:${C.accent};\">${esc(CONFIG.tagline[lang])}</td>\n      </tr></table>\n    </td></tr>\n    <!-- hero -->\n    <tr><td style=\"background:#ffffff;padding:32px 32px 8px;\">\n      <div style=\"display:inline-block;padding:6px 12px;border-radius:999px;background:${C.accent};font:600 12px ${font};color:${C.ink};\">✓ ${esc(T.title)}</div>\n      <h1 style=\"margin:16px 0 8px;font:700 26px/1.25 ${font};color:${C.ink};\">${esc(T.hello)}</h1>\n      <p style=\"margin:0;font:15px/1.6 ${font};color:${C.muted};\">${esc(T.intro)}</p>\n    </td></tr>\n    <!-- date card -->\n    <tr><td style=\"background:#ffffff;padding:24px 32px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid ${C.line};border-left:4px solid ${C.brand};border-radius:12px;\">\n        <tr><td style=\"padding:20px 22px;\">\n          <div style=\"font:600 12px ${font};color:${C.muted};text-transform:uppercase;letter-spacing:1px;\">${esc(T.when)}</div>\n          <div style=\"margin-top:6px;font:700 20px ${font};color:${C.ink};\">${esc(dateLine)}</div>\n          <div style=\"margin-top:4px;font:16px ${font};color:${C.ink};\">${esc(timeLine)} <span style=\"color:${C.muted};\">(${esc(T.tz)})</span></div>\n          <div style=\"margin-top:10px;font:13px ${font};color:${C.muted};\">${esc(T.format)}</div>\n        </td></tr>\n      </table>\n    </td></tr>\n    <!-- buttons -->\n    <tr><td style=\"background:#ffffff;padding:0 32px 8px;\">\n      ${CONFIG.meetingUrl ? button(CONFIG.meetingUrl, T.join, true) + '&nbsp;' : ''}${button(gcalUrl, T.gcal, !CONFIG.meetingUrl)}&nbsp;\n      ${button(outlookUrl, T.outlook, false)}\n      ${CONFIG.meetingUrl || CONFIG.demoDisclaimer ? '' : `<p style=\"margin:14px 0 0;font:13px ${font};color:${C.muted};\">${esc(T.linkLater)}</p>`}\n    </td></tr>\n    <!-- agenda -->\n    <tr><td style=\"background:#ffffff;padding:24px 32px 8px;\">\n      <h2 style=\"margin:0 0 10px;font:700 16px ${font};color:${C.ink};\">${esc(T.agenda)}</h2>\n      ${T.items.map((it, i) => `<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 8px;\"><tr>\n        <td style=\"width:26px;vertical-align:top;\"><div style=\"width:20px;height:20px;border-radius:999px;background:${C.bg};color:${C.brand};font:700 12px/20px ${font};text-align:center;\">${i + 1}</div></td>\n        <td style=\"font:14px/1.5 ${font};color:${C.ink};\">${esc(it)}</td></tr></table>`).join('')}\n    </td></tr>\n    <!-- summary -->\n    <tr><td style=\"background:#ffffff;padding:8px 32px 28px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:${C.bg};border-radius:12px;\"><tr><td style=\"padding:14px 18px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n          ${row(T.company, r.company)}${row(T.yourCase, r.use_case)}\n        </table>\n      </td></tr></table>\n      <p style=\"margin:18px 0 0;font:14px ${font};color:${C.ink};\">${esc(T.change)}</p>\n      <p style=\"margin:18px 0 0;font:14px ${font};color:${C.ink};\">— Nora · ${esc(CONFIG.brand)}</p>\n    </td></tr>\n    <!-- footer -->\n    <tr><td style=\"background:${C.ink};border-radius:0 0 16px 16px;padding:18px 32px;\">\n      <p style=\"margin:0;font:12px/1.5 ${font};color:${C.accent};\">${esc(CONFIG.brand)} · ${esc(CONFIG.tagline[lang])}</p>\n      ${CONFIG.demoDisclaimer ? `<p style=\"margin:6px 0 0;font:11px/1.5 ${font};color:#B9CCC6;\">${esc(T.disclaimer)}</p>` : ''}\n    </td></tr>\n  </table>\n</td></tr></table>\n</body></html>`;\n\nreturn [{ json: { to, subject: T.subject, html, gcal_url: gcalUrl, outlook_url: outlookUrl } }];\n"
       },
-      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
-      "name": "Read me",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
+      "id": "aa3fcfe7-e3be-5482-9d7f-341d593ba312",
+      "name": "Confirmation Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        0,
-        -300
+        1900,
+        460
       ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Nora · Fluxa"
+        }
+      },
+      "id": "98b5f0e9-f15c-5346-8f57-96a8a9df4adc",
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2120,
+        460
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ '⚠️ <b>No se pudo enviar el email de confirmación</b>\\n' + $('Confirmation Email').first().json.to + '\\nRevisa la credencial de Gmail en n8n.' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "095078e1-7d41-53b8-ba75-68234b1ba3c2",
+      "name": "Email Failed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2340,
+        620
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -375,6 +515,40 @@
         [
           {
             "node": "Respond Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Book": {
+      "main": [
+        [
+          {
+            "node": "Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Email Failed",
             "type": "main",
             "index": 0
           }

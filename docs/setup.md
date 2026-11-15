@@ -10,7 +10,9 @@ Crea una hoja "Fluxa demo" con dos pestañas y estas cabeceras en la fila 1:
 ## 2. n8n
 1. Importa `n8n/fluxa-tools.json` y `n8n/fluxa-post-call.json`.
 2. En los nodos de Google Sheets: credencial "Google Sheets account" y reemplaza `REPLACE_WITH_FLUXA_SHEET_ID` por el ID de la hoja.
-3. En los nodos de Telegram: credencial (puede ser la de HR Advisor) y reemplaza `REPLACE_WITH_TELEGRAM_CHAT_ID`.
+3. En los nodos de Telegram: credencial "Fluxa bot" y reemplaza `REPLACE_WITH_TELEGRAM_CHAT_ID`.
+   - **Email al lead:** en **Send Confirmation** crea una credencial *Gmail OAuth2* (Credentials → New → Gmail OAuth2 → Sign in with Google) con la cuenta que enviará los emails. Si no la configuras, la reserva funciona igual y llega un aviso "No se pudo enviar el email" por Telegram.
+   - Textos, colores, duración y enlace de la reunión del email: objeto `CONFIG` al inicio del nodo **Confirmation Email**. Con `meetingUrl` vacío no hay botón de unirse.
 4. (Opcional, recomendado) En los nodos **Availability** y **Book**, cambia `SECRET` por una clave tuya; la usarás como cabecera `x-demo-key` en ElevenLabs.
 5. **Avisos de error:** importa `n8n/fluxa-error-alert.json`, credencial de Telegram del bot de Fluxa en **Alert on Telegram**, chat ID, y **publícalo** (n8n exige que el error workflow esté publicado para poder elegirlo).
 6. En Tools y Post-call: Settings → zona horaria **Europe/Madrid** y **Error workflow → "Fluxa Voice Agent · Error Alert"**. **Publica** los dos workflows.

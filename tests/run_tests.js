@@ -31,3 +31,22 @@ ok(/Nueva llamada/.test(pc.text), 'Telegram text built');
 ok(/Minutos de voz este mes: ~2.4 \/ 15/.test(pc.text), 'monthly minutes counter (' + pc.row.month_minutes + ' min)');
 const st = run('post_call.js', { 'Post-call Webhook': [{ body: { data: { conversation_id: 'selftest-1', metadata: { call_duration_secs: 95 }, analysis: { data_collection_results: {} } } } }] });
 ok(st.row.month_minutes === 2.4 && /AUTOPRUEBA/.test(st.text), 'self-test does not count towards the monthly minutes');
+
+// Post-call: current ElevenLabs format (results keyed by aitem_ id, identifier in .name, mixed case)
+const pc2 = run('post_call.js', { 'Post-call Webhook': [{ body: { data: { conversation_id: 'c2', metadata: { call_duration_secs: 60, text_only: true },
+  analysis: { data_collection_results: { aitem_a: { name: 'Name', value: 'Luis Gil' }, aitem_b: { name: 'company', value: 'Gil SL' },
+    aitem_c: { name: 'team_size', value: '25 personas' }, aitem_d: { name: 'demo_booked', value: false } } } } } }] });
+ok(pc2.row.name === 'Luis Gil' && pc2.row.company === 'Gil SL' && pc2.row.team_size === '25 personas', 'post-call reads aitem_ format (case-insensitive)');
+ok(pc2.row.month_minutes === 2.4 && /chat de texto/.test(pc2.text), 'text-only chats do not count towards the monthly minutes');
+
+// Confirmation email
+const runAll = (file, nodes) => new Function('$', fs.readFileSync(S + file, 'utf8'))((n) => ({ first: () => ({ json: nodes[n][0] }) }));
+const em = runAll('confirm_email.js', { 'Book': [good] })[0].json;
+const gd = decodeURIComponent((em.gcal_url.match(/dates=([^&]+)/) || [])[1] || '');
+const startUtc = new Date(good.row.slot_iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+ok(em.to === 'ana@acme.io' && /confirmada/.test(em.subject), 'email built for the lead: ' + em.subject);
+ok(gd.startsWith(startUtc + '/') && /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/.test(em.gcal_url), 'Google Calendar link has the right start time (' + gd + ')');
+const xss = runAll('confirm_email.js', { 'Book': [{ ...good, row: { ...good.row, company: '<script>x</script>' } }] })[0].json;
+ok(!/<script>x/.test(xss.html) && /&lt;script&gt;/.test(xss.html), 'email escapes HTML in lead data');
+ok(runAll('confirm_email.js', { 'Book': [{ ...good, row: { ...good.row, email: 'prueba@example.com' } }] }).length === 0, 'no email for test addresses (@example.com)');
+ok(runAll('confirm_email.js', { 'Book': [bad] }).length === 0, 'no email when the booking failed');

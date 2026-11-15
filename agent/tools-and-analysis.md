@@ -28,6 +28,8 @@ Base URL = your n8n production webhook URL, e.g. `https://<your-n8n-domain>/webh
   | `language` | string | yes | `es` or `en`. |
 
 ## Data collection (Analysis → Data collection)
+> Usa los identificadores **en minúsculas** tal cual aparecen aquí. El post-call ya tolera mayúsculas, pero así coinciden con las columnas de la hoja.
+
 | identifier | type | description |
 |---|---|---|
 | `name` | string | Caller full name, if given. |
