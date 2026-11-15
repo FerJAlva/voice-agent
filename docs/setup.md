@@ -5,7 +5,7 @@ Todo con tu cuenta **personal** y datos ficticios. Nada del empleador actual.
 ## 1. Google Sheets
 Crea una hoja "Fluxa demo" con dos pestañas y estas cabeceras en la fila 1:
 - **Demos:** `id, slot_iso, when_madrid, name, email, company, role, team_size, use_case, language, created_at`
-- **Leads:** `conversation_id, date, duration_s, language, name, company, role, team_size, use_case, timeline, demo_booked, score, tier, summary, turns, month_minutes`
+- **Leads:** `conversation_id, date, duration_s, language, name, company, role, team_size, use_case, timeline, demo_booked, score, tier, summary, turns, month_minutes, score_reasons`
 
 ## 2. n8n
 1. Importa `n8n/fluxa-tools.json` y `n8n/fluxa-post-call.json`.
