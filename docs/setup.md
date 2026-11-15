@@ -13,7 +13,7 @@ Crea una hoja "Fluxa demo" con dos pestañas y estas cabeceras en la fila 1:
 3. En los nodos de Telegram: credencial "Fluxa bot" y reemplaza `REPLACE_WITH_TELEGRAM_CHAT_ID`.
    - **Email al lead:** en **Send Confirmation** crea una credencial *Gmail OAuth2* (Credentials → New → Gmail OAuth2 → Sign in with Google) con la cuenta que enviará los emails. Si no la configuras, la reserva funciona igual y llega un aviso "No se pudo enviar el email" por Telegram.
    - Textos, colores, duración y enlace de la reunión del email: objeto `CONFIG` al inicio del nodo **Confirmation Email**. Con `meetingUrl` vacío no hay botón de unirse.
-4. (Opcional, recomendado) En los nodos **Availability** y **Book**, cambia `SECRET` por una clave tuya; la usarás como cabecera `x-demo-key` en ElevenLabs.
+4. **Clave de los webhooks (muy recomendado, sobre todo con el email activo):** en **Availability** y **Book** cambia `SECRET` por una clave larga aleatoria. En ElevenLabs guárdala como secreto del workspace y añádela como cabecera `x-demo-key` (tipo Secret) en `get_availability` y `book_demo`. Pon la misma clave en el nodo **Config** de la autoprueba. Sin ella, cualquiera con la URL podría reservar y disparar emails.
 5. **Avisos de error:** importa `n8n/fluxa-error-alert.json`, credencial de Telegram del bot de Fluxa en **Alert on Telegram**, chat ID, y **publícalo** (n8n exige que el error workflow esté publicado para poder elegirlo).
 6. En Tools y Post-call: Settings → zona horaria **Europe/Madrid** y **Error workflow → "Fluxa Voice Agent · Error Alert"**. **Publica** los dos workflows.
 7. Copia las URLs de producción de los webhooks (`…/webhook/fluxa-availability`, `…/webhook/fluxa-book`, `…/webhook/fluxa-post-call`).
