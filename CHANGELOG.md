@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6 — 2026-11-15
+- **Puntuación explicada y configurable:** objeto `SCORING` en el nodo Post-call; cada punto deja su motivo en la columna nueva `score_reasons` de Leads y en Telegram ("Por qué: …"). Detecta más cargos (dueño/a, VP, gerente…) y plazos ("en enero" si está a 3 meses o menos). Campo opcional `icp_fit`.
+- Docs de venta: `docs/producto.md` (página para clientes), `docs/vender.md` (dónde publicar, paquetes, precios, mantenimiento) y `docs/adaptar-a-clientes.md` (cuestionario de descubrimiento y conectores).
+
 ## v0.5 — 2026-11-15
 - **Email de confirmación al lead** (`src/confirm_email.js` + nodo Gmail): diseño Fluxa en ES/EN, fecha y hora, botones "Añadir a Google Calendar" y "Outlook / otro calendario". Se envía después de responder a Nora (no retrasa la llamada); no se envía si la reserva falla o el email es de prueba; si Gmail falla, aviso por Telegram.
 - Post-call: lee el formato actual de ElevenLabs (resultados por `aitem_…` con el identificador en `name`, sin distinguir mayúsculas). Antes la fila de Leads llegaba vacía.

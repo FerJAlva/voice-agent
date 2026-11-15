@@ -50,3 +50,16 @@ const xss = runAll('confirm_email.js', { 'Book': [{ ...good, row: { ...good.row,
 ok(!/<script>x/.test(xss.html) && /&lt;script&gt;/.test(xss.html), 'email escapes HTML in lead data');
 ok(runAll('confirm_email.js', { 'Book': [{ ...good, row: { ...good.row, email: 'prueba@example.com' } }] }).length === 0, 'no email for test addresses (@example.com)');
 ok(runAll('confirm_email.js', { 'Book': [bad] }).length === 0, 'no email when the booking failed');
+
+// Explained scoring
+const pcR = (dc) => run('post_call.js', { 'Post-call Webhook': [{ body: { data: { conversation_id: 'r' + Math.random(), metadata: { text_only: true },
+  analysis: { data_collection_results: Object.fromEntries(Object.entries(dc).map(([k, v], i) => ['aitem_' + i, { name: k, value: v }])) } } } }] });
+const r1 = pcR({ team_size: '40', role: 'Head of Operations', timeline: 'este trimestre', use_case: 'Automatizar el reporting semanal', demo_booked: true });
+ok(r1.row.score === 100 && /cargo con decisión: Head of Operations \(\+25\)/.test(r1.row.score_reasons) && /Por qué:/.test(r1.text), 'score reasons explained: ' + r1.row.score_reasons);
+const r2 = pcR({ team_size: '3', role: 'analista', timeline: 'el año que viene', use_case: 'reportes' });
+ok(!/^[+=-]/.test(r1.row.score_reasons) && r2.row.score === 0 && r2.row.tier === 'Frío' && /plazo lejano/.test(r2.row.score_reasons), 'cold lead scores 0 with reasons');
+const nextMonth = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][(new Date().getMonth() + 1) % 12];
+const farMonth = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][(new Date().getMonth() + 6) % 12];
+ok(/plazo cercano.*\(\+25\)/.test(pcR({ timeline: 'en ' + nextMonth }).row.score_reasons) && /plazo lejano/.test(pcR({ timeline: 'en ' + farMonth }).row.score_reasons), `month timelines: ${nextMonth} counts, ${farMonth} does not`);
+ok(/cargo con decisión/.test(pcR({ role: 'Dueña' }).row.score_reasons) && /cargo con decisión/.test(pcR({ role: 'VP Sales' }).row.score_reasons), 'decision roles: Dueña, VP');
+ok(pcR({ team_size: '40', role: 'CEO', timeline: 'asap', use_case: 'automatizar todas las aprobaciones de compras', demo_booked: true, icp_fit: 'high' }).row.score === 100, 'score capped at 100 with icp_fit');

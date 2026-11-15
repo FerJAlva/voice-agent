@@ -6,6 +6,8 @@ Nora answers website visitors by voice, in Spanish or English, understands their
 
 **Try it:** `https://ferjalva.github.io/fluxa/` (short calls, limited monthly minutes) · **Video:** _coming soon_
 
+> **Para clientes:** qué hace y con qué se conecta → [`docs/producto.md`](docs/producto.md)
+
 ## How it works
 ```
 Visitor ──voice──► ElevenLabs agent (STT · LLM · TTS · knowledge base)
