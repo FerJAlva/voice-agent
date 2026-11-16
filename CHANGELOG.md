@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.1 — 2026-11-16
+- **Google Calendar activado en producción** (credencial "Google Calendar account"): disponibilidad desde el calendario real y reserva con evento, invitación y enlace de Meet en el email.
+- `agenda.calendar_id` debe ser el email del calendario: n8n rechaza `primary`. Placeholder nuevo `REPLACE_WITH_CALENDAR_EMAIL`.
+- Si Google Calendar devuelve un error al leer el calendario, el flujo falla con un aviso claro en vez de ofrecer todos los huecos como libres.
+
 ## v0.7 — 2026-11-15
 - **Conectores intercambiables.** Tools y Post-call ya no llevan herramientas dentro: leen el sub-workflow **Config** (`src/config.js`: marca, horario, puntuación, clave `x-demo-key`, IDs y qué herramienta hace cada función) y llaman a 4 sub-workflows con entrada y salida fijas: **Agenda** (huecos ocupados + crear reunión), **Store** (guardar), **Notify** (avisar) y **Email**. Cambiar de herramienta = cambiar Config o añadir una salida en el conector, sin tocar el resto.
 - **Conector Google Calendar con Google Meet** en Agenda: disponibilidad desde el calendario real (cualquier evento bloquea, no solo coincidencias exactas), evento con el lead invitado y enlace de Meet, botón "Unirse a la videollamada" en el email y enlace en el aviso. Viene desactivado hasta conectar la credencial; si está apagado y se elige, falla con un aviso claro en vez de ofrecer todos los huecos.

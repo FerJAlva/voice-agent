@@ -110,3 +110,6 @@ ok(pcS.row.score === 75 && pcS.row.tier === 'Templado', 'scoring weights and thr
 // Google Calendar nodes ship disabled: a passed-through request must not look like "no events"
 let threw = false; try { runIn('agenda_busy_gcal.js', [{ action: 'busy', provider: 'google_calendar' }]); } catch (e) { threw = /no está conectado/.test(e.message); }
 ok(threw && runIn('agenda_event.js', [{ action: 'create' }]).ok === false, 'disabled Google Calendar nodes fail loudly instead of offering every slot');
+// A Google Calendar error (e.g. invalid calendar id) must not look like "no events" either
+let threw2 = false; try { runIn('agenda_busy_gcal.js', [{ error: "ERROR: Calendar parameter's value is invalid" }]); } catch (e) { threw2 = /calendar_id/.test(e.message); }
+ok(threw2, 'a Google Calendar read error fails loudly instead of offering every slot');
