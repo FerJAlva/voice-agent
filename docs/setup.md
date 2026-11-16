@@ -33,7 +33,7 @@ El backend son **2 workflows principales** (Tools y Post-call) que no llevan her
 ### Usar Google Calendar con Google Meet (opcional)
 1. Crea una credencial *Google Calendar OAuth2* en n8n con la cuenta del calendario donde caerán las demos.
 2. En el sub-workflow **Agenda**, activa *List Events (Google Calendar)* y *Create Event (Google Calendar)* y elige esa credencial. Publica.
-3. En **Config** cambia `connectors.agenda.provider` a `'google_calendar'` (y `calendar_id` si no es el calendario principal).
+3. En **Config** cambia `connectors.agenda.provider` a `'google_calendar'` y pon en `calendar_id` el email del calendario (el de la cuenta con la que conectaste la credencial; n8n no acepta `primary`).
 Desde ese momento los huecos ocupados salen del calendario real (cualquier evento bloquea el hueco, salvo los marcados como "disponible"), cada reserva crea un evento con el lead como invitado y enlace de **Google Meet**, Google le envía la invitación y el email de confirmación muestra el botón **Unirse a la videollamada**. La hoja sigue guardando el registro (con `meet_url` y `event_id`). Si el calendario falla al crear el evento, la reserva se guarda igual y el aviso al equipo lo indica.
 
 ### Añadir otro conector (Outlook, HubSpot, Slack…)

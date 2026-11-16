@@ -33,7 +33,7 @@ const CONFIG = {
   },
   connectors: {
     // Which tool does each job. Every option is a branch in the matching sub-workflow.
-    agenda: { provider: 'sheets', calendar_id: 'primary' },     // 'sheets' (booked slots in the Demos tab) | 'google_calendar' (free/busy + event with Meet)
+    agenda: { provider: 'sheets', calendar_id: 'REPLACE_WITH_CALENDAR_EMAIL' },     // 'sheets' (booked slots in the Demos tab) | 'google_calendar' (free/busy + event with Meet). calendar_id = the calendar's email ('primary' is not accepted by n8n)
     store:  { provider: 'sheets', sheet_id: 'REPLACE_WITH_FLUXA_SHEET_ID', demos_tab: 'Demos', leads_tab: 'Leads' },   // 'sheets'
     notify: { provider: 'telegram', chat_id: 'REPLACE_WITH_TELEGRAM_CHAT_ID' },                                        // 'telegram' | 'none'
     email:  { provider: 'gmail', skip_domains: ['example.com', 'example.org', 'test.com'] }                            // 'gmail' | 'none'
