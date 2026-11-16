@@ -10,7 +10,7 @@ Base URL = your n8n production webhook URL, e.g. `https://<your-n8n-domain>/webh
   |---|---|---|---|
   | `preferred_day` | string | no | Day the caller prefers: a weekday name in English or Spanish ("tuesday", "martes") or a date `YYYY-MM-DD`. Empty if none. |
   | `language` | string | yes | Conversation language: `es` or `en`. |
-- **Header (recomendado):** `x-demo-key` → tipo *Secret* en ElevenLabs (secreto del workspace, p. ej. `fluxa_demo_key`), con el mismo valor que `SECRET` en los nodos Availability y Book de n8n. Nunca lo escribas en el repo.
+- **Header (recomendado):** `x-demo-key` → tipo *Secret* en ElevenLabs (secreto del workspace, p. ej. `fluxa_demo_key`), con el mismo valor que `security.demo_key` en el sub-workflow **Config** de n8n. Nunca lo escribas en el repo.
 
 ## Tool 2 · `book_demo` (Webhook, POST)
 - **Description:** Books the demo in the chosen slot. Call it only after the caller confirmed the slot and you have name, work email and company. Then read the `say` field of the response.

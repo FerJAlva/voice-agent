@@ -1,0 +1,200 @@
+{
+  "name": "Fluxa Voice Agent · Email",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Fluxa · Email (conector de email al lead)\nEntrada: `{ provider, to, subject, html, sender_name }`. Salida: `{ ok }` o `{ ok: false, error }`.\n**Proveedores:** `gmail` (credencial de Gmail).\n**Añadir otro (Outlook / Microsoft 365, SMTP, SendGrid):** una salida más en **Route** que termine en **Sent** o **Failed**.",
+        "width": 860,
+        "height": 260,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b85863b8-6ed0-5403-9001-1d1c02cced58",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4e28d3cc-66c4-58ab-adf7-d0ac943b8314",
+                    "leftValue": "={{ $json.provider }}",
+                    "rightValue": "gmail",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "gmail"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "otro"
+        }
+      },
+      "id": "f8142440-461f-5718-99f9-f543ef363962",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Start').first().json.to }}",
+        "subject": "={{ $('Start').first().json.subject }}",
+        "emailType": "html",
+        "message": "={{ $('Start').first().json.html }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Start').first().json.sender_name }}"
+        }
+      },
+      "id": "d30fb64d-76b6-5f30-99be-256d0b422e28",
+      "name": "Send (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        440,
+        -60
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput",
+      "webhookId": "6085aee8-d893-5458-9a91-7522a33b0124"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true, provider: 'gmail', id: $input.first().json.id || '' } }];"
+      },
+      "id": "4e34f38e-df49-5bc2-9d70-2d60db246c1c",
+      "name": "Sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json.error;\nreturn [{ json: { ok: false, provider: 'gmail', error: String((e && e.message) || e || 'error') } }];"
+      },
+      "id": "f9d81214-613b-5b62-962b-657666d20bd2",
+      "name": "Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, skipped: true, error: 'Conector de email no soportado: ' + $('Start').first().json.provider } }];"
+      },
+      "id": "21086fcb-11dd-5e9e-bc9a-8cfe278a9021",
+      "name": "Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Send (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send (Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}

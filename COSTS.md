@@ -10,6 +10,7 @@
 | n8n | VPS propio (compartido con otros proyectos) | **[completar: X €/mes]** | — | Proveedor del VPS |
 | Google Sheets | Gratis | 0 € | — | — |
 | Telegram | Gratis | 0 € | — | — |
+| Google Calendar + Meet (conector de agenda opcional, apagado en la demo) | Cuenta de Google gratuita | 0 € | Cuotas de la API de Calendar muy por encima del uso (2 llamadas por reserva) | Google Calendar |
 | Gmail (email de confirmación al lead) | Cuenta de Google gratuita | 0 € | ~500 emails/día con Gmail personal (2.000 con Workspace); 1 email por demo reservada | Gmail → Enviados |
 | GitHub + GitHub Pages | Gratis | 0 € | Repo público | — |
 | **Total nuevo de este proyecto** | | **0 €** | | |

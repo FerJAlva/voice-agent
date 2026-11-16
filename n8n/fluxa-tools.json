@@ -3,9 +3,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Fluxa · Tools (herramientas de Nora)\nDos webhooks que llama el agente de ElevenLabs durante la llamada:\n- **POST /webhook/fluxa-availability** → huecos libres para la demo\n- **POST /webhook/fluxa-book** → reserva, avisa al equipo y manda el email al lead\n\n**Configurar:** ID de la hoja en los 3 nodos de Sheets · chat ID en los nodos de Telegram · credenciales de Google Sheets, Telegram y Gmail · Publish.\nReglas de agenda (horario, días, antelación) en el nodo **Availability**; textos y diseño del email en **Confirmation Email**.",
-        "width": 900,
-        "height": 320,
+        "content": "## Fluxa · Tools (herramientas de Nora)\nDos webhooks que llama el agente de ElevenLabs durante la llamada:\n- **POST /webhook/fluxa-availability** → huecos libres para la demo\n- **POST /webhook/fluxa-book** → reserva, avisa al equipo y manda el email al lead\n\nEste workflow **no tiene herramientas dentro**: lee la configuración del sub-workflow **Config** y usa los conectores **Agenda**, **Store**, **Notify** y **Email**. Para cambiar de herramienta (p. ej. Google Calendar en vez de la hoja) se toca solo Config.\n**Configurar:** elige los 5 sub-workflows en los nodos morados (Execute Workflow) · Publish.",
+        "width": 1000,
+        "height": 380,
         "color": 1
       },
       "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
@@ -14,14 +14,14 @@
       "typeVersion": 1,
       "position": [
         -60,
-        -520
+        -600
       ]
     },
     {
       "parameters": {
-        "content": "### ① Consultar disponibilidad\nRecibe la petición de Nora, lee las demos ya reservadas en la hoja y calcula los huecos libres (lun–vie, 10:00–17:00 Madrid, 30 min, 2 h de antelación). Responde con hasta 4 huecos.",
-        "width": 900,
-        "height": 300,
+        "content": "### ① Consultar disponibilidad\nCarga Config, comprueba la clave `x-demo-key`, pide los huecos ocupados al conector **Agenda** y calcula los libres con las reglas de Config (días, horario, duración, antelación). Responde con hasta 4 huecos.",
+        "width": 1340,
+        "height": 320,
         "color": 5
       },
       "id": "27f0791a-0fc4-5e51-a061-d00ecace4558",
@@ -30,7 +30,7 @@
       "typeVersion": 1,
       "position": [
         -60,
-        -140
+        -200
       ]
     },
     {
@@ -46,49 +46,76 @@
       "typeVersion": 2,
       "position": [
         0,
-        20
+        -20
       ],
       "webhookId": "dc6796a2-f4d1-584b-9a6e-e4fe953f9793"
     },
     {
       "parameters": {
-        "operation": "read",
-        "documentId": {
+        "mode": "once",
+        "workflowId": {
           "__rl": true,
-          "value": "REPLACE_WITH_FLUXA_SHEET_ID",
+          "value": "REPLACE_WITH_CONFIG_WORKFLOW_ID",
           "mode": "id"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Demos",
-          "mode": "name"
-        },
-        "filtersUI": {},
-        "options": {}
+        "options": {
+          "waitForSubWorkflow": true
+        }
       },
-      "id": "b63c137e-e7c2-5575-be57-ddc25b686740",
-      "name": "Read Demos",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "id": "507edd36-dd7b-5e0b-a50a-d1c113f3ce6e",
+      "name": "Config",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         220,
-        20
-      ],
-      "alwaysOutputData": true,
-      "executeOnce": true,
-      "onError": "continueRegularOutput"
+        -20
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// FLUXA DEMO · CHECK AVAILABILITY  (tool called by the voice agent)\n// Demo rules: Mon–Fri, 10:00–17:00 Europe/Madrid, 30-min slots, next business days,\n// minus slots already booked in the Google Sheets tab \"Demos\".\n// Input (POST body from ElevenLabs): { preferred_day?: \"2026-10-20\" | \"monday\" | \"lunes\", language?: \"es\"|\"en\" }\n// ============================================================\nconst SECRET = 'CHANGE_ME_IN_N8N';           // optional: must match the header x-demo-key set in the ElevenLabs tool\nconst req = $('Availability Webhook').first().json;\nif (SECRET !== 'CHANGE_ME_IN_N8N' && (req.headers || {})['x-demo-key'] !== SECRET) return [{ json: { ok: false, error: 'unauthorized' } }];\nconst body = req.body || {};\nconst lang = String(body.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nconst TZ = 'Europe/Madrid';\nlet booked = [];\ntry { booked = $('Read Demos').all().map(i => String(i.json.slot_iso || '')).filter(Boolean); } catch (e) { booked = []; }\nconst bookedSet = new Set(booked);\n\n// offset (minutes) of TZ at a given UTC instant\nconst tzOffset = (d) => {\n  const p = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })\n    .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});\n  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);\n  return Math.round((asUTC - d.getTime()) / 60000);\n};\n// UTC Date for a Madrid wall-clock time\nconst madrid = (y, m, d, hh, mm) => { const guess = new Date(Date.UTC(y, m - 1, d, hh, mm)); return new Date(guess.getTime() - tzOffset(guess) * 60000); };\nconst localParts = (d) => new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })\n  .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});\nconst label = (d) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(d);\n\nconst DAYS = { monday: 1, lunes: 1, tuesday: 2, martes: 2, wednesday: 3, miercoles: 3, 'miércoles': 3, thursday: 4, jueves: 4, friday: 5, viernes: 5 };\nconst pref = String(body.preferred_day || '').toLowerCase().trim();\nconst now = new Date();\nconst minStart = now.getTime() + 2 * 3600 * 1000;   // at least 2 h notice\nconst slots = [];\nfor (let i = 0; i < 14 && slots.length < 40; i++) {\n  const p = localParts(new Date(now.getTime() + i * 86400000));\n  const wd = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 }[p.weekday];\n  if (wd === 0 || wd === 6) continue;\n  if (pref && /^\\d{4}-\\d{2}-\\d{2}$/.test(pref) && `${p.year}-${p.month}-${p.day}` !== pref) continue;\n  if (pref && DAYS[pref] && DAYS[pref] !== wd) continue;\n  for (let h = 10; h < 17; h++) for (const mm of [0, 30]) {\n    const s = madrid(+p.year, +p.month, +p.day, h, mm);\n    if (s.getTime() < minStart) continue;\n    if (!bookedSet.has(s.toISOString())) slots.push(s);\n  }\n}\n// offer a few spread-out options, not all of them\nconst pick = [];\nfor (const s of slots) { if (!pick.length || s - pick[pick.length - 1] >= 3 * 3600 * 1000) pick.push(s); if (pick.length >= 4) break; }\nreturn [{ json: {\n  ok: true, timezone: TZ,\n  slots: pick.map(s => ({ slot_iso: s.toISOString(), label: label(s) })),\n  note: pick.length ? '' : (lang === 'en' ? 'No free slots for that day. Offer another day.' : 'No hay huecos ese día. Ofrece otro día.')\n} }];\n"
+        "jsCode": "// ============================================================\n// FLUXA · AGENDA REQUEST  (Tools: before \"Get Busy\")\n// Checks the x-demo-key header and asks the agenda connector for the busy times we need:\n// the whole booking horizon (availability) or a window around the chosen slot (booking).\n// Unauthorized requests skip the connector; the next node answers \"unauthorized\".\n// ============================================================\nconst cfg = $('Config').first().json;\nconst req = $('Availability Webhook').first().json;\nconst key = (cfg.security || {}).demo_key;\nconst authorized = !key || key === 'CHANGE_ME_IN_N8N' || (req.headers || {})['x-demo-key'] === key;\nconst s = cfg.schedule, agenda = cfg.connectors.agenda, store = cfg.connectors.store;\nconst slot = new Date((req.body || {}).slot_iso || '');\nconst now = Date.now(), H = 3600000;\nconst from = isNaN(slot) ? new Date(now) : new Date(slot.getTime() - 12 * H);\nconst to = isNaN(slot) ? new Date(now + (s.horizon_days + 1) * 24 * H) : new Date(slot.getTime() + 12 * H);\nreturn [{ json: {\n  action: authorized ? 'busy' : 'skip', authorized,\n  provider: agenda.provider, calendar_id: agenda.calendar_id || 'primary',\n  sheet_id: store.sheet_id, tab: store.demos_tab,\n  slot_minutes: s.slot_minutes, from: from.toISOString(), to: to.toISOString()\n} }];\n"
+      },
+      "id": "de82ea35-1d31-567f-b357-5332f2b7fdb5",
+      "name": "Agenda Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "once",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_AGENDA_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "f9bb367e-57ba-584e-ac8a-1a619caf4d29",
+      "name": "Get Busy",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA · CHECK AVAILABILITY  (tool called by the voice agent)\n// Free slots = schedule rules from Config minus the busy times returned by the agenda connector\n// (Sheets \"Demos\" tab or Google Calendar). Rules: days, hours, length, notice, horizon in Config.\n// Input (POST body from ElevenLabs): { preferred_day?: \"2026-10-20\" | \"monday\" | \"lunes\", language?: \"es\"|\"en\" }\n// ============================================================\nconst cfg = $('Config').first().json;\nif (!$('Agenda Request').first().json.authorized) return [{ json: { ok: false, error: 'unauthorized' } }];\nconst body = $('Availability Webhook').first().json.body || {};\nconst lang = String(body.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nconst S = cfg.schedule, TZ = S.timezone, DUR = S.slot_minutes * 60000;\nlet busy = [];\ntry { busy = ($('Get Busy').first().json.busy || []).map(b => [new Date(b.start).getTime(), new Date(b.end).getTime()]).filter(([a, b]) => a < b); } catch (e) { busy = []; }\nconst isFree = (t) => !busy.some(([a, b]) => t < b && t + DUR > a);\n\n// offset (minutes) of TZ at a given UTC instant\nconst tzOffset = (d) => {\n  const p = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })\n    .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});\n  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);\n  return Math.round((asUTC - d.getTime()) / 60000);\n};\n// UTC Date for a wall-clock time in TZ\nconst local = (y, m, d, hh, mm) => { const guess = new Date(Date.UTC(y, m - 1, d, hh, mm)); return new Date(guess.getTime() - tzOffset(guess) * 60000); };\nconst localParts = (d) => new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })\n  .formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {});\nconst label = (d) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(d);\n\nconst DAYS = { sunday: 0, domingo: 0, monday: 1, lunes: 1, tuesday: 2, martes: 2, wednesday: 3, miercoles: 3, 'miércoles': 3, thursday: 4, jueves: 4, friday: 5, viernes: 5, saturday: 6, sabado: 6, 'sábado': 6 };\nconst pref = String(body.preferred_day || '').toLowerCase().trim();\nconst now = new Date();\nconst minStart = now.getTime() + S.min_notice_hours * 3600 * 1000;\nconst slots = [];\nfor (let i = 0; i < S.horizon_days && slots.length < 60; i++) {\n  const p = localParts(new Date(now.getTime() + i * 86400000));\n  const wd = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[p.weekday];\n  if (!S.weekdays.includes(wd)) continue;\n  if (pref && /^\\d{4}-\\d{2}-\\d{2}$/.test(pref) && `${p.year}-${p.month}-${p.day}` !== pref) continue;\n  if (pref && DAYS[pref] !== undefined && DAYS[pref] !== wd) continue;\n  for (let m = S.start_hour * 60; m + S.slot_minutes <= S.end_hour * 60; m += S.slot_minutes) {\n    const s = local(+p.year, +p.month, +p.day, Math.floor(m / 60), m % 60);\n    if (s.getTime() >= minStart && isFree(s.getTime())) slots.push(s);\n  }\n}\n// offer a few spread-out options, not all of them\nconst pick = [];\nfor (const s of slots) { if (!pick.length || s - pick[pick.length - 1] >= S.spread_hours * 3600 * 1000) pick.push(s); if (pick.length >= S.max_offers) break; }\nreturn [{ json: {\n  ok: true, timezone: TZ,\n  slots: pick.map(s => ({ slot_iso: s.toISOString(), label: label(s) })),\n  note: pick.length ? '' : (lang === 'en' ? 'No free slots for that day. Offer another day.' : 'No hay huecos ese día. Ofrece otro día.')\n} }];\n"
       },
       "id": "9a7a7431-efec-54c6-b13a-d06aaa00eb57",
       "name": "Availability",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
-        20
+        880,
+        -20
       ]
     },
     {
@@ -102,15 +129,15 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        660,
-        20
+        1100,
+        -20
       ]
     },
     {
       "parameters": {
-        "content": "### ② Recibir y validar la reserva\nDatos del lead + hueco elegido. **Book** comprueba campos, email y que el hueco siga libre. Si algo falla, va directo a ④ con un mensaje para que Nora lo diga.",
-        "width": 900,
-        "height": 320,
+        "content": "### ② Recibir y validar la reserva\nDatos del lead + hueco elegido. **Book** comprueba la clave, los campos, el email y que el hueco siga libre en la agenda. Si algo falla, va directo a ④ con un mensaje para que Nora lo diga.",
+        "width": 1340,
+        "height": 340,
         "color": 5
       },
       "id": "9f72c182-0ce6-56e0-a51b-a48cfc21e9a0",
@@ -119,7 +146,7 @@
       "typeVersion": 1,
       "position": [
         -60,
-        300
+        340
       ]
     },
     {
@@ -135,49 +162,76 @@
       "typeVersion": 2,
       "position": [
         0,
-        460
+        520
       ],
       "webhookId": "cf2a2529-f07d-5e76-acd2-6fb0274dede1"
     },
     {
       "parameters": {
-        "operation": "read",
-        "documentId": {
+        "mode": "once",
+        "workflowId": {
           "__rl": true,
-          "value": "REPLACE_WITH_FLUXA_SHEET_ID",
+          "value": "REPLACE_WITH_CONFIG_WORKFLOW_ID",
           "mode": "id"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Demos",
-          "mode": "name"
-        },
-        "filtersUI": {},
-        "options": {}
+        "options": {
+          "waitForSubWorkflow": true
+        }
       },
-      "id": "136fd242-92ff-5647-92d6-3e40e19e48f9",
-      "name": "Read Demos (book)",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "id": "1c0c7ba2-ee71-58ca-a5d0-2ddae20211fb",
+      "name": "Config (book)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         220,
-        460
-      ],
-      "alwaysOutputData": true,
-      "executeOnce": true,
-      "onError": "continueRegularOutput"
+        520
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// FLUXA DEMO · BOOK DEMO  (tool called by the voice agent)\n// Input: { name, email, company, role?, team_size?, use_case?, slot_iso, language? }\n// Validates the slot and returns { ok, row, say }. The row is appended to the \"Demos\" tab.\n// ============================================================\nconst SECRET = 'CHANGE_ME_IN_N8N';\nconst req = $('Book Webhook').first().json;\nif (SECRET !== 'CHANGE_ME_IN_N8N' && (req.headers || {})['x-demo-key'] !== SECRET) return [{ json: { ok: false, error: 'unauthorized' } }];\nconst b = req.body || {};\nconst lang = String(b.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nconst fail = (error, es, en, extra = {}) => [{ json: { ok: false, error, say: lang === 'en' ? en : es, ...extra } }];\nconst missing = ['name', 'email', 'company', 'slot_iso'].filter(k => !String(b[k] || '').trim());\nif (missing.length) return fail('missing_fields', `Me falta: ${missing.join(', ')}.`, `I still need: ${missing.join(', ')}.`, { missing });\nif (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(String(b.email).trim())) return fail('invalid_email', 'Ese email no parece válido. ¿Me lo deletreas de nuevo?', 'That email does not look valid. Can you spell it again?');\nconst slot = new Date(b.slot_iso);\nif (isNaN(slot) || slot.getTime() < Date.now()) return fail('invalid_slot', 'Ese horario no está disponible. Déjame ver otras opciones.', 'That time is not available. Let me check other options.');\nlet booked = [];\ntry { booked = $('Read Demos (book)').all().map(i => String(i.json.slot_iso || '')); } catch (e) { booked = []; }\nif (booked.includes(slot.toISOString())) return fail('slot_taken', 'Ese hueco se acaba de ocupar. Te ofrezco otro.', 'That slot was just taken. Let me offer another one.');\nconst id = 'demo_' + Date.now().toString(36);\nconst when = new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(slot);\nreturn [{ json: {\n  ok: true,\n  row: { id, slot_iso: slot.toISOString(), when_madrid: when, name: String(b.name).trim(), email: String(b.email).trim().toLowerCase(),\n         company: String(b.company).trim(), role: String(b.role || ''), team_size: String(b.team_size || ''), use_case: String(b.use_case || ''),\n         language: lang, created_at: new Date().toISOString() },\n  say: lang === 'en' ? `Done. Your demo is booked for ${when} (Madrid time). You will get a confirmation by email.`\n                     : `Listo. Tu demo queda reservada para el ${when} (hora de Madrid). Recibirás la confirmación por email.`\n} }];\n"
+        "jsCode": "// ============================================================\n// FLUXA · AGENDA REQUEST  (Tools: before \"Get Busy\")\n// Checks the x-demo-key header and asks the agenda connector for the busy times we need:\n// the whole booking horizon (availability) or a window around the chosen slot (booking).\n// Unauthorized requests skip the connector; the next node answers \"unauthorized\".\n// ============================================================\nconst cfg = $('Config (book)').first().json;\nconst req = $('Book Webhook').first().json;\nconst key = (cfg.security || {}).demo_key;\nconst authorized = !key || key === 'CHANGE_ME_IN_N8N' || (req.headers || {})['x-demo-key'] === key;\nconst s = cfg.schedule, agenda = cfg.connectors.agenda, store = cfg.connectors.store;\nconst slot = new Date((req.body || {}).slot_iso || '');\nconst now = Date.now(), H = 3600000;\nconst from = isNaN(slot) ? new Date(now) : new Date(slot.getTime() - 12 * H);\nconst to = isNaN(slot) ? new Date(now + (s.horizon_days + 1) * 24 * H) : new Date(slot.getTime() + 12 * H);\nreturn [{ json: {\n  action: authorized ? 'busy' : 'skip', authorized,\n  provider: agenda.provider, calendar_id: agenda.calendar_id || 'primary',\n  sheet_id: store.sheet_id, tab: store.demos_tab,\n  slot_minutes: s.slot_minutes, from: from.toISOString(), to: to.toISOString()\n} }];\n"
+      },
+      "id": "3e72a267-2419-5559-91ca-2d0d98f83ae8",
+      "name": "Agenda Request (book)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "once",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_AGENDA_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "92bdf7d9-e5e2-5c85-9bd5-0b176a999f28",
+      "name": "Get Busy (book)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA · BOOK DEMO  (tool called by the voice agent)\n// Input: { name, email, company, role?, team_size?, use_case?, slot_iso, language? }\n// Validates the data and that the slot is still free in the agenda connector.\n// Returns { ok, row, say }. Later nodes create the event, save the row and notify the team.\n// ============================================================\nconst cfg = $('Config (book)').first().json;\nconst b = $('Book Webhook').first().json.body || {};\nconst lang = String(b.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nif (!$('Agenda Request (book)').first().json.authorized) return [{ json: { ok: false, error: 'unauthorized' } }];\nconst fail = (error, es, en, extra = {}) => [{ json: { ok: false, error, say: lang === 'en' ? en : es, ...extra } }];\nconst missing = ['name', 'email', 'company', 'slot_iso'].filter(k => !String(b[k] || '').trim());\nif (missing.length) return fail('missing_fields', `Me falta: ${missing.join(', ')}.`, `I still need: ${missing.join(', ')}.`, { missing });\nif (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(String(b.email).trim())) return fail('invalid_email', 'Ese email no parece válido. ¿Me lo deletreas de nuevo?', 'That email does not look valid. Can you spell it again?');\nconst slot = new Date(b.slot_iso);\nif (isNaN(slot) || slot.getTime() < Date.now()) return fail('invalid_slot', 'Ese horario no está disponible. Déjame ver otras opciones.', 'That time is not available. Let me check other options.');\nconst S = cfg.schedule, DUR = S.slot_minutes * 60000, t = slot.getTime();\nlet busy = [];\ntry { busy = $('Get Busy (book)').first().json.busy || []; } catch (e) { busy = []; }\nif (busy.some(x => t < new Date(x.end).getTime() && t + DUR > new Date(x.start).getTime()))\n  return fail('slot_taken', 'Ese hueco se acaba de ocupar. Te ofrezco otro.', 'That slot was just taken. Let me offer another one.');\nconst id = 'demo_' + Date.now().toString(36);\nconst when = new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: S.timezone, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(slot);\nconst city = S.timezone.split('/').pop().replace(/_/g, ' ');\nreturn [{ json: {\n  ok: true,\n  row: { id, slot_iso: slot.toISOString(), when_madrid: when, name: String(b.name).trim(), email: String(b.email).trim().toLowerCase(),\n         company: String(b.company).trim(), role: String(b.role || ''), team_size: String(b.team_size || ''), use_case: String(b.use_case || ''),\n         language: lang, created_at: new Date().toISOString() },\n  say: lang === 'en' ? `Done. Your demo is booked for ${when} (${city} time). You will get a confirmation by email.`\n                     : `Listo. Tu demo queda reservada para el ${when} (hora de ${city}). Recibirás la confirmación por email.`\n} }];\n"
       },
       "id": "30db21f9-c1e9-5d6d-bae6-46b572c09806",
       "name": "Book",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
-        460
+        880,
+        520
       ]
     },
     {
@@ -210,15 +264,15 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        660,
-        460
+        1100,
+        520
       ]
     },
     {
       "parameters": {
-        "content": "### ③ Guardar y avisar al equipo\nAñade la fila a la pestaña **Demos** (3 reintentos; si falla salta el aviso de error) y manda el aviso de Telegram al equipo comercial.",
-        "width": 680,
-        "height": 320,
+        "content": "### ③ Crear la reunión y guardar\n**Agenda** crea el evento (con Google Calendar: invitación + Google Meet; con la hoja no hace nada) y **Store** guarda la reserva (3 reintentos; si falla salta el aviso de error).",
+        "width": 900,
+        "height": 340,
         "color": 4
       },
       "id": "1095484e-36dd-5641-81e5-3d301e977119",
@@ -226,81 +280,83 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        860,
-        300
+        1300,
+        340
       ]
     },
     {
       "parameters": {
-        "jsCode": "return [{ json: $('Book').first().json.row }];"
+        "jsCode": "// Meeting to create in the agenda connector (Google Calendar adds the lead as guest + Meet link)\nconst cfg = $('Config (book)').first().json, r = $('Book').first().json.row, a = cfg.connectors.agenda, b = cfg.brand;\nconst end = new Date(new Date(r.slot_iso).getTime() + cfg.schedule.slot_minutes * 60000).toISOString();\nreturn [{ json: { action: 'create', provider: a.provider, calendar_id: a.calendar_id || 'primary', booking: {\n  start: r.slot_iso, end, email: r.email, summary: `${b.name} · Demo · ${r.company}`,\n  description: `Lead: ${r.name}${r.role ? ' (' + r.role + ')' : ''} · ${r.company}\\nEquipo: ${r.team_size || '?'}\\nCaso: ${r.use_case || '?'}\\nReservada por ${b.agent} (agente de voz).`\n} } }];"
+      },
+      "id": "53c9859e-ed80-55f1-8e2c-046592d892be",
+      "name": "Event Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "once",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_AGENDA_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "8e39349d-c3c1-5ccc-a0c3-518cfdd9feb8",
+      "name": "Create Event",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1580,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Booking row for the store connector (+ meeting link and event id when the agenda created one)\nconst cfg = $('Config (book)').first().json, st = cfg.connectors.store, ev = $('Create Event').first().json || {};\nreturn [{ json: { provider: st.provider, sheet_id: st.sheet_id, tab: st.demos_tab,\n  row: { ...$('Book').first().json.row, meet_url: ev.meet_url || '', event_id: ev.event_id || '' } } }];"
       },
       "id": "42bae770-a107-5881-b681-f528b69ed799",
       "name": "Demo Row",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        920,
-        460
+        1800,
+        520
       ]
     },
     {
       "parameters": {
-        "operation": "append",
-        "documentId": {
+        "mode": "once",
+        "workflowId": {
           "__rl": true,
-          "value": "REPLACE_WITH_FLUXA_SHEET_ID",
+          "value": "REPLACE_WITH_STORE_WORKFLOW_ID",
           "mode": "id"
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Demos",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "matchingColumns": [],
-          "schema": []
-        },
-        "options": {}
+        "options": {
+          "waitForSubWorkflow": true
+        }
       },
       "id": "729f4aa8-cb13-5610-a4c1-3713b65f8b08",
       "name": "Save Demo",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        1140,
-        460
-      ],
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000
-    },
-    {
-      "parameters": {
-        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
-        "text": "={{ '📅 <b>Demo reservada</b>\\n' + $('Book').first().json.row.name + ' · ' + $('Book').first().json.row.company + '\\n' + $('Book').first().json.row.when_madrid + ' (Madrid) · ' + $('Book').first().json.row.email }}",
-        "additionalFields": {
-          "appendAttribution": false,
-          "disable_web_page_preview": true,
-          "parse_mode": "HTML"
-        }
-      },
-      "id": "94bba543-a335-5cb2-a794-eca72203d25c",
-      "name": "Notify Demo",
-      "type": "n8n-nodes-base.telegram",
+      "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1360,
-        460
-      ],
-      "onError": "continueRegularOutput"
+        2020,
+        520
+      ]
     },
     {
       "parameters": {
-        "content": "### ④ Responder a Nora\nDevuelve `ok` y la frase `say` que Nora lee al lead.",
+        "content": "### ④ Responder a Nora\nDevuelve `ok` y la frase `say` que Nora lee al lead. Lo demás va después para no hacer esperar a la llamada.",
         "width": 260,
-        "height": 320,
+        "height": 340,
         "color": 6
       },
       "id": "91e0c151-d6bb-5798-a562-646cd4ce7f64",
@@ -308,8 +364,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1560,
-        300
+        2220,
+        340
       ]
     },
     {
@@ -323,15 +379,15 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1620,
-        460
+        2280,
+        520
       ]
     },
     {
       "parameters": {
-        "content": "### ⑤ Email de confirmación al lead\nSe ejecuta **después** de responder a Nora, así no retrasa la llamada. Diseño Fluxa (ES/EN) con botones de Google Calendar y Outlook. No se envía si la reserva falló o el email es de prueba (@example.com). Si Gmail falla, avisa por Telegram.",
-        "width": 700,
-        "height": 480,
+        "content": "### ⑤ Avisar al equipo y email al lead\nAviso por el conector **Notify** y email con diseño de marca (ES/EN, botones de calendario y de videollamada) por el conector **Email**. No se envía si la reserva falló o el email es de prueba (@example.com). Si el email falla, avisa al equipo.",
+        "width": 1340,
+        "height": 520,
         "color": 2
       },
       "id": "49f5a9ad-4cbd-5b84-b32c-77ace843eeb7",
@@ -339,66 +395,146 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1840,
-        300
+        2500,
+        340
       ]
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// FLUXA DEMO · CONFIRMATION EMAIL  (runs after the booking is saved)\n// Builds a branded HTML email (ES/EN) with \"Add to Google Calendar\" and Outlook links.\n// Output: { to, subject, html } for the Gmail node. Returns no items (= no email) when the\n// booking failed or the address is a test one (self-test), so nothing is sent by mistake.\n// ============================================================\nconst CONFIG = {\n  brand: 'Fluxa',\n  tagline: { es: 'Automatización de flujos con IA para equipos de operaciones', en: 'AI workflow automation for operations teams' },\n  durationMin: 30,\n  timezone: 'Europe/Madrid',\n  meetingUrl: '',                 // video-call link; empty = the email says the link arrives before the demo\n  demoDisclaimer: true,           // portfolio demo: says Fluxa is fictional. Set false for a real client.\n  skipDomains: ['example.com', 'example.org', 'test.com'],\n  colors: { brand: '#0E5C4E', accent: '#8EDCC4', bg: '#EEF3F1', ink: '#15302B', muted: '#4F6862', line: '#CFDDD8' }\n};\n\nconst book = $('Book').first().json;\nif (!book.ok || !book.row) return [];\nconst r = book.row;\nconst to = String(r.email || '').trim().toLowerCase();\nif (!to || CONFIG.skipDomains.some(d => to.endsWith('@' + d))) return [];\n\nconst lang = r.language === 'en' ? 'en' : 'es';\nconst start = new Date(r.slot_iso);\nconst end = new Date(start.getTime() + CONFIG.durationMin * 60000);\nconst fmt = (opts) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: CONFIG.timezone, ...opts });\nconst cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);\nconst dateLine = cap(fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(start));\nconst timeLine = `${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)} – ${fmt({ hour: '2-digit', minute: '2-digit' }).format(end)}`;\nconst firstName = String(r.name || '').trim().split(/\\s+/)[0] || '';\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\n\nconst T = {\n  es: {\n    subject: `Tu demo de ${CONFIG.brand} está confirmada · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,\n    preheader: `${dateLine} · ${timeLine} (hora de Madrid). Añádela a tu calendario con un clic.`,\n    hello: firstName ? `¡Hola, ${firstName}!` : '¡Hola!',\n    title: 'Tu demo está confirmada',\n    intro: `Gracias por hablar con Nora. Hemos reservado ${CONFIG.durationMin} minutos con un especialista de ${CONFIG.brand} para ver tu caso en directo.`,\n    when: 'Cuándo', tz: 'hora de Madrid', format: `Online · ${CONFIG.durationMin} min · con un especialista`,\n    gcal: 'Añadir a Google Calendar', outlook: 'Outlook / otro calendario', join: 'Unirse a la videollamada',\n    linkLater: 'Te enviaremos el enlace de la videollamada antes de la demo.',\n    agenda: 'Qué veremos', yourCase: 'Tu caso', company: 'Empresa',\n    items: ['Tu flujo de trabajo actual y dónde se pierde tiempo.', 'Un ejemplo en vivo de Fluxa resolviendo un caso parecido.', 'Próximos pasos y cómo sería la puesta en marcha.'],\n    change: '¿Necesitas cambiar la hora? Responde a este email y lo movemos.',\n    disclaimer: `${CONFIG.brand} es una empresa ficticia: este email forma parte de una demo de portfolio de un agente de voz con IA. No habrá una reunión real.`,\n    calDetails: `Demo de ${CONFIG.brand} (${CONFIG.durationMin} min) con un especialista.`\n  },\n  en: {\n    subject: `Your ${CONFIG.brand} demo is confirmed · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,\n    preheader: `${dateLine} · ${timeLine} (Madrid time). Add it to your calendar in one click.`,\n    hello: firstName ? `Hi ${firstName},` : 'Hi,',\n    title: 'Your demo is confirmed',\n    intro: `Thanks for talking to Nora. We have booked ${CONFIG.durationMin} minutes with a ${CONFIG.brand} specialist to walk through your use case live.`,\n    when: 'When', tz: 'Madrid time', format: `Online · ${CONFIG.durationMin} min · with a specialist`,\n    gcal: 'Add to Google Calendar', outlook: 'Outlook / other calendar', join: 'Join the video call',\n    linkLater: 'We will send you the video-call link before the demo.',\n    agenda: 'What we will cover', yourCase: 'Your use case', company: 'Company',\n    items: ['Your current workflow and where time gets lost.', 'A live example of Fluxa solving a similar case.', 'Next steps and what a rollout would look like.'],\n    change: 'Need a different time? Reply to this email and we will move it.',\n    disclaimer: `${CONFIG.brand} is a fictional company: this email is part of a portfolio demo of an AI voice agent. There will be no real meeting.`,\n    calDetails: `${CONFIG.brand} demo (${CONFIG.durationMin} min) with a specialist.`\n  }\n}[lang];\n\n// Calendar links (UTC times, so they land at the right local time for anyone)\nconst utc = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '');\nconst title = `${CONFIG.brand} · Demo${r.company ? ' · ' + r.company : ''}`;\nconst details = [T.calDetails, r.use_case ? `${T.yourCase}: ${r.use_case}` : '', CONFIG.meetingUrl].filter(Boolean).join('\\n');\n// n8n's Code sandbox has no URLSearchParams, so build query strings by hand\nconst qs = (o) => Object.entries(o).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');\nconst gcalUrl = 'https://calendar.google.com/calendar/render?' + qs({\n  action: 'TEMPLATE', text: title, dates: `${utc(start)}/${utc(end)}`, details, location: CONFIG.meetingUrl || 'Online', ctz: CONFIG.timezone\n});\nconst outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?' + qs({\n  path: '/calendar/action/compose', rru: 'addevent', subject: title, startdt: start.toISOString(), enddt: end.toISOString(),\n  body: details, location: CONFIG.meetingUrl || 'Online'\n});\n\nconst C = CONFIG.colors;\nconst font = \"'Helvetica Neue', Helvetica, Arial, sans-serif\";\nconst button = (href, label, primary) => `\n  <a href=\"${esc(href)}\" target=\"_blank\" style=\"display:inline-block;padding:14px 22px;border-radius:10px;font:600 15px ${font};text-decoration:none;${primary\n    ? `background:${C.brand};color:#ffffff;` : `background:#ffffff;color:${C.brand};border:1px solid ${C.line};`}\">${esc(label)}</a>`;\nconst row = (label, value) => value ? `\n  <tr><td style=\"padding:6px 0;font:13px ${font};color:${C.muted};width:110px;vertical-align:top;\">${esc(label)}</td>\n      <td style=\"padding:6px 0;font:14px ${font};color:${C.ink};\">${esc(value)}</td></tr>` : '';\n\nconst html = `<!doctype html>\n<html lang=\"${lang}\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<meta name=\"color-scheme\" content=\"light\"><title>${esc(T.title)}</title></head>\n<body style=\"margin:0;padding:0;background:${C.bg};\">\n<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">${esc(T.preheader)}</div>\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:${C.bg};\">\n<tr><td align=\"center\" style=\"padding:32px 16px;\">\n  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;\">\n    <!-- header -->\n    <tr><td style=\"background:${C.brand};border-radius:16px 16px 0 0;padding:28px 32px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n        <td style=\"font:700 24px ${font};color:#ffffff;letter-spacing:-0.5px;\">${esc(CONFIG.brand)}<span style=\"color:${C.accent};\">.</span></td>\n        <td align=\"right\" style=\"font:12px ${font};color:${C.accent};\">${esc(CONFIG.tagline[lang])}</td>\n      </tr></table>\n    </td></tr>\n    <!-- hero -->\n    <tr><td style=\"background:#ffffff;padding:32px 32px 8px;\">\n      <div style=\"display:inline-block;padding:6px 12px;border-radius:999px;background:${C.accent};font:600 12px ${font};color:${C.ink};\">✓ ${esc(T.title)}</div>\n      <h1 style=\"margin:16px 0 8px;font:700 26px/1.25 ${font};color:${C.ink};\">${esc(T.hello)}</h1>\n      <p style=\"margin:0;font:15px/1.6 ${font};color:${C.muted};\">${esc(T.intro)}</p>\n    </td></tr>\n    <!-- date card -->\n    <tr><td style=\"background:#ffffff;padding:24px 32px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid ${C.line};border-left:4px solid ${C.brand};border-radius:12px;\">\n        <tr><td style=\"padding:20px 22px;\">\n          <div style=\"font:600 12px ${font};color:${C.muted};text-transform:uppercase;letter-spacing:1px;\">${esc(T.when)}</div>\n          <div style=\"margin-top:6px;font:700 20px ${font};color:${C.ink};\">${esc(dateLine)}</div>\n          <div style=\"margin-top:4px;font:16px ${font};color:${C.ink};\">${esc(timeLine)} <span style=\"color:${C.muted};\">(${esc(T.tz)})</span></div>\n          <div style=\"margin-top:10px;font:13px ${font};color:${C.muted};\">${esc(T.format)}</div>\n        </td></tr>\n      </table>\n    </td></tr>\n    <!-- buttons -->\n    <tr><td style=\"background:#ffffff;padding:0 32px 8px;\">\n      ${CONFIG.meetingUrl ? button(CONFIG.meetingUrl, T.join, true) + '&nbsp;' : ''}${button(gcalUrl, T.gcal, !CONFIG.meetingUrl)}&nbsp;\n      ${button(outlookUrl, T.outlook, false)}\n      ${CONFIG.meetingUrl || CONFIG.demoDisclaimer ? '' : `<p style=\"margin:14px 0 0;font:13px ${font};color:${C.muted};\">${esc(T.linkLater)}</p>`}\n    </td></tr>\n    <!-- agenda -->\n    <tr><td style=\"background:#ffffff;padding:24px 32px 8px;\">\n      <h2 style=\"margin:0 0 10px;font:700 16px ${font};color:${C.ink};\">${esc(T.agenda)}</h2>\n      ${T.items.map((it, i) => `<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 8px;\"><tr>\n        <td style=\"width:26px;vertical-align:top;\"><div style=\"width:20px;height:20px;border-radius:999px;background:${C.bg};color:${C.brand};font:700 12px/20px ${font};text-align:center;\">${i + 1}</div></td>\n        <td style=\"font:14px/1.5 ${font};color:${C.ink};\">${esc(it)}</td></tr></table>`).join('')}\n    </td></tr>\n    <!-- summary -->\n    <tr><td style=\"background:#ffffff;padding:8px 32px 28px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:${C.bg};border-radius:12px;\"><tr><td style=\"padding:14px 18px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n          ${row(T.company, r.company)}${row(T.yourCase, r.use_case)}\n        </table>\n      </td></tr></table>\n      <p style=\"margin:18px 0 0;font:14px ${font};color:${C.ink};\">${esc(T.change)}</p>\n      <p style=\"margin:18px 0 0;font:14px ${font};color:${C.ink};\">— Nora · ${esc(CONFIG.brand)}</p>\n    </td></tr>\n    <!-- footer -->\n    <tr><td style=\"background:${C.ink};border-radius:0 0 16px 16px;padding:18px 32px;\">\n      <p style=\"margin:0;font:12px/1.5 ${font};color:${C.accent};\">${esc(CONFIG.brand)} · ${esc(CONFIG.tagline[lang])}</p>\n      ${CONFIG.demoDisclaimer ? `<p style=\"margin:6px 0 0;font:11px/1.5 ${font};color:#B9CCC6;\">${esc(T.disclaimer)}</p>` : ''}\n    </td></tr>\n  </table>\n</td></tr></table>\n</body></html>`;\n\nreturn [{ json: { to, subject: T.subject, html, gcal_url: gcalUrl, outlook_url: outlookUrl } }];\n"
+        "jsCode": "// Brief for the team (only when the booking went through)\nconst book = $('Book').first().json;\nif (!book.ok) return [];\nconst cfg = $('Config (book)').first().json, n = cfg.connectors.notify, r = book.row;\nlet ev = {}; try { ev = $('Create Event').first().json || {}; } catch (e) {}\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst city = cfg.schedule.timezone.split('/').pop().replace(/_/g, ' ');\nconst text = `📅 <b>Demo reservada</b>\\n${esc(r.name)} · ${esc(r.company)}\\n${esc(r.when_madrid)} (${esc(city)}) · ${esc(r.email)}` +\n  (ev.meet_url ? `\\n🎥 ${esc(ev.meet_url)}` : '') + (ev.ok === false ? `\\n⚠️ No se pudo crear el evento en el calendario: ${esc(ev.error)}` : '');\nreturn [{ json: { provider: n.provider, chat_id: n.chat_id, text } }];"
+      },
+      "id": "03268909-d0fe-59fb-98a1-0f4fb8d56b89",
+      "name": "Demo Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "once",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTIFY_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "94bba543-a335-5cb2-a794-eca72203d25c",
+      "name": "Notify Demo",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2780,
+        520
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FLUXA · CONFIRMATION EMAIL  (runs after Nora has the answer)\n// Builds a branded HTML email (ES/EN) with \"Add to Google Calendar\" and Outlook links,\n// and the video-call button when the agenda connector created a meeting (Google Meet).\n// Output: { provider, to, subject, html, sender_name } for the Email sub-workflow. Returns no items\n// (= no email) when the booking failed, the email connector is 'none' or the address is a test one.\n// Brand, colours and schedule come from the Config sub-workflow.\n// ============================================================\nconst cfg = $('Config (book)').first().json;\nconst B = cfg.brand || {}, EM = (cfg.connectors || {}).email || {};\nlet ev = {};\ntry { ev = $('Create Event').first().json || {}; } catch (e) { ev = {}; }\nconst CONFIG = {\n  brand: B.name || 'Fluxa',\n  agent: B.agent || 'Nora',\n  tagline: B.tagline || { es: '', en: '' },\n  durationMin: cfg.schedule.slot_minutes,\n  timezone: cfg.schedule.timezone,\n  meetingUrl: ev.meet_url || '',  // video-call link from the agenda connector; empty = the email says the link arrives before the demo\n  demoDisclaimer: B.demo_disclaimer !== false,\n  skipDomains: EM.skip_domains || ['example.com'],\n  colors: B.colors\n};\n\nconst book = $('Book').first().json;\nif (!book.ok || !book.row || !EM.provider || EM.provider === 'none') return [];\nconst r = book.row;\nconst to = String(r.email || '').trim().toLowerCase();\nif (!to || CONFIG.skipDomains.some(d => to.endsWith('@' + d))) return [];\n\nconst lang = r.language === 'en' ? 'en' : 'es';\nconst start = new Date(r.slot_iso);\nconst end = new Date(start.getTime() + CONFIG.durationMin * 60000);\nconst fmt = (opts) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'es-ES', { timeZone: CONFIG.timezone, ...opts });\nconst cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);\nconst dateLine = cap(fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(start));\nconst timeLine = `${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)} – ${fmt({ hour: '2-digit', minute: '2-digit' }).format(end)}`;\nconst firstName = String(r.name || '').trim().split(/\\s+/)[0] || '';\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\n\nconst city = CONFIG.timezone.split('/').pop().replace(/_/g, ' ');\nconst T = {\n  es: {\n    subject: `Tu demo de ${CONFIG.brand} está confirmada · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,\n    preheader: `${dateLine} · ${timeLine} (hora de ${city}). Añádela a tu calendario con un clic.`,\n    hello: firstName ? `¡Hola, ${firstName}!` : '¡Hola!',\n    title: 'Tu demo está confirmada',\n    intro: `Gracias por hablar con ${CONFIG.agent}. Hemos reservado ${CONFIG.durationMin} minutos con un especialista de ${CONFIG.brand} para ver tu caso en directo.`,\n    when: 'Cuándo', tz: `hora de ${city}`, format: `Online · ${CONFIG.durationMin} min · con un especialista`,\n    gcal: 'Añadir a Google Calendar', outlook: 'Outlook / otro calendario', join: 'Unirse a la videollamada',\n    linkLater: 'Te enviaremos el enlace de la videollamada antes de la demo.',\n    agenda: 'Qué veremos', yourCase: 'Tu caso', company: 'Empresa',\n    items: ['Tu flujo de trabajo actual y dónde se pierde tiempo.', `Un ejemplo en vivo de ${CONFIG.brand} resolviendo un caso parecido.`, 'Próximos pasos y cómo sería la puesta en marcha.'],\n    change: '¿Necesitas cambiar la hora? Responde a este email y lo movemos.',\n    disclaimer: `${CONFIG.brand} es una empresa ficticia: este email forma parte de una demo de portfolio de un agente de voz con IA. No habrá una reunión real.`,\n    calDetails: `Demo de ${CONFIG.brand} (${CONFIG.durationMin} min) con un especialista.`\n  },\n  en: {\n    subject: `Your ${CONFIG.brand} demo is confirmed · ${dateLine}, ${fmt({ hour: '2-digit', minute: '2-digit' }).format(start)}`,\n    preheader: `${dateLine} · ${timeLine} (${city} time). Add it to your calendar in one click.`,\n    hello: firstName ? `Hi ${firstName},` : 'Hi,',\n    title: 'Your demo is confirmed',\n    intro: `Thanks for talking to ${CONFIG.agent}. We have booked ${CONFIG.durationMin} minutes with a ${CONFIG.brand} specialist to walk through your use case live.`,\n    when: 'When', tz: `${city} time`, format: `Online · ${CONFIG.durationMin} min · with a specialist`,\n    gcal: 'Add to Google Calendar', outlook: 'Outlook / other calendar', join: 'Join the video call',\n    linkLater: 'We will send you the video-call link before the demo.',\n    agenda: 'What we will cover', yourCase: 'Your use case', company: 'Company',\n    items: ['Your current workflow and where time gets lost.', `A live example of ${CONFIG.brand} solving a similar case.`, 'Next steps and what a rollout would look like.'],\n    change: 'Need a different time? Reply to this email and we will move it.',\n    disclaimer: `${CONFIG.brand} is a fictional company: this email is part of a portfolio demo of an AI voice agent. There will be no real meeting.`,\n    calDetails: `${CONFIG.brand} demo (${CONFIG.durationMin} min) with a specialist.`\n  }\n}[lang];\n\n// Calendar links (UTC times, so they land at the right local time for anyone)\nconst utc = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '');\nconst title = `${CONFIG.brand} · Demo${r.company ? ' · ' + r.company : ''}`;\nconst details = [T.calDetails, r.use_case ? `${T.yourCase}: ${r.use_case}` : '', CONFIG.meetingUrl].filter(Boolean).join('\\n');\n// n8n's Code sandbox has no URLSearchParams, so build query strings by hand\nconst qs = (o) => Object.entries(o).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');\nconst gcalUrl = 'https://calendar.google.com/calendar/render?' + qs({\n  action: 'TEMPLATE', text: title, dates: `${utc(start)}/${utc(end)}`, details, location: CONFIG.meetingUrl || 'Online', ctz: CONFIG.timezone\n});\nconst outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?' + qs({\n  path: '/calendar/action/compose', rru: 'addevent', subject: title, startdt: start.toISOString(), enddt: end.toISOString(),\n  body: details, location: CONFIG.meetingUrl || 'Online'\n});\n\nconst C = CONFIG.colors;\nconst font = \"'Helvetica Neue', Helvetica, Arial, sans-serif\";\nconst button = (href, label, primary) => `\n  <a href=\"${esc(href)}\" target=\"_blank\" style=\"display:inline-block;padding:14px 22px;border-radius:10px;font:600 15px ${font};text-decoration:none;${primary\n    ? `background:${C.brand};color:#ffffff;` : `background:#ffffff;color:${C.brand};border:1px solid ${C.line};`}\">${esc(label)}</a>`;\nconst row = (label, value) => value ? `\n  <tr><td style=\"padding:6px 0;font:13px ${font};color:${C.muted};width:110px;vertical-align:top;\">${esc(label)}</td>\n      <td style=\"padding:6px 0;font:14px ${font};color:${C.ink};\">${esc(value)}</td></tr>` : '';\n\nconst html = `<!doctype html>\n<html lang=\"${lang}\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<meta name=\"color-scheme\" content=\"light\"><title>${esc(T.title)}</title></head>\n<body style=\"margin:0;padding:0;background:${C.bg};\">\n<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">${esc(T.preheader)}</div>\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:${C.bg};\">\n<tr><td align=\"center\" style=\"padding:32px 16px;\">\n  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;\">\n    <!-- header -->\n    <tr><td style=\"background:${C.brand};border-radius:16px 16px 0 0;padding:28px 32px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n        <td style=\"font:700 24px ${font};color:#ffffff;letter-spacing:-0.5px;\">${esc(CONFIG.brand)}<span style=\"color:${C.accent};\">.</span></td>\n        <td align=\"right\" style=\"font:12px ${font};color:${C.accent};\">${esc(CONFIG.tagline[lang])}</td>\n      </tr></table>\n    </td></tr>\n    <!-- hero -->\n    <tr><td style=\"background:#ffffff;padding:32px 32px 8px;\">\n      <div style=\"display:inline-block;padding:6px 12px;border-radius:999px;background:${C.accent};font:600 12px ${font};color:${C.ink};\">✓ ${esc(T.title)}</div>\n      <h1 style=\"margin:16px 0 8px;font:700 26px/1.25 ${font};color:${C.ink};\">${esc(T.hello)}</h1>\n      <p style=\"margin:0;font:15px/1.6 ${font};color:${C.muted};\">${esc(T.intro)}</p>\n    </td></tr>\n    <!-- date card -->\n    <tr><td style=\"background:#ffffff;padding:24px 32px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid ${C.line};border-left:4px solid ${C.brand};border-radius:12px;\">\n        <tr><td style=\"padding:20px 22px;\">\n          <div style=\"font:600 12px ${font};color:${C.muted};text-transform:uppercase;letter-spacing:1px;\">${esc(T.when)}</div>\n          <div style=\"margin-top:6px;font:700 20px ${font};color:${C.ink};\">${esc(dateLine)}</div>\n          <div style=\"margin-top:4px;font:16px ${font};color:${C.ink};\">${esc(timeLine)} <span style=\"color:${C.muted};\">(${esc(T.tz)})</span></div>\n          <div style=\"margin-top:10px;font:13px ${font};color:${C.muted};\">${esc(T.format)}</div>\n        </td></tr>\n      </table>\n    </td></tr>\n    <!-- buttons -->\n    <tr><td style=\"background:#ffffff;padding:0 32px 8px;\">\n      ${CONFIG.meetingUrl ? button(CONFIG.meetingUrl, T.join, true) + '&nbsp;' : ''}${button(gcalUrl, T.gcal, !CONFIG.meetingUrl)}&nbsp;\n      ${button(outlookUrl, T.outlook, false)}\n      ${CONFIG.meetingUrl || CONFIG.demoDisclaimer ? '' : `<p style=\"margin:14px 0 0;font:13px ${font};color:${C.muted};\">${esc(T.linkLater)}</p>`}\n    </td></tr>\n    <!-- agenda -->\n    <tr><td style=\"background:#ffffff;padding:24px 32px 8px;\">\n      <h2 style=\"margin:0 0 10px;font:700 16px ${font};color:${C.ink};\">${esc(T.agenda)}</h2>\n      ${T.items.map((it, i) => `<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 8px;\"><tr>\n        <td style=\"width:26px;vertical-align:top;\"><div style=\"width:20px;height:20px;border-radius:999px;background:${C.bg};color:${C.brand};font:700 12px/20px ${font};text-align:center;\">${i + 1}</div></td>\n        <td style=\"font:14px/1.5 ${font};color:${C.ink};\">${esc(it)}</td></tr></table>`).join('')}\n    </td></tr>\n    <!-- summary -->\n    <tr><td style=\"background:#ffffff;padding:8px 32px 28px;\">\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:${C.bg};border-radius:12px;\"><tr><td style=\"padding:14px 18px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n          ${row(T.company, r.company)}${row(T.yourCase, r.use_case)}\n        </table>\n      </td></tr></table>\n      <p style=\"margin:18px 0 0;font:14px ${font};color:${C.ink};\">${esc(T.change)}</p>\n      <p style=\"margin:18px 0 0;font:14px ${font};color:${C.ink};\">— ${esc(CONFIG.agent)} · ${esc(CONFIG.brand)}</p>\n    </td></tr>\n    <!-- footer -->\n    <tr><td style=\"background:${C.ink};border-radius:0 0 16px 16px;padding:18px 32px;\">\n      <p style=\"margin:0;font:12px/1.5 ${font};color:${C.accent};\">${esc(CONFIG.brand)} · ${esc(CONFIG.tagline[lang])}</p>\n      ${CONFIG.demoDisclaimer ? `<p style=\"margin:6px 0 0;font:11px/1.5 ${font};color:#B9CCC6;\">${esc(T.disclaimer)}</p>` : ''}\n    </td></tr>\n  </table>\n</td></tr></table>\n</body></html>`;\n\nreturn [{ json: { provider: EM.provider, to, subject: T.subject, html, sender_name: B.sender_name || `${CONFIG.agent} · ${CONFIG.brand}`, gcal_url: gcalUrl, outlook_url: outlookUrl } }];\n"
       },
       "id": "aa3fcfe7-e3be-5482-9d7f-341d593ba312",
       "name": "Confirmation Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1900,
-        460
+        3000,
+        520
       ]
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "send",
-        "sendTo": "={{ $json.to }}",
-        "subject": "={{ $json.subject }}",
-        "emailType": "html",
-        "message": "={{ $json.html }}",
+        "mode": "once",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_EMAIL_WORKFLOW_ID",
+          "mode": "id"
+        },
         "options": {
-          "appendAttribution": false,
-          "senderName": "Nora · Fluxa"
+          "waitForSubWorkflow": true
         }
       },
-      "id": "98b5f0e9-f15c-5346-8f57-96a8a9df4adc",
-      "name": "Send Confirmation",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
+      "id": "eba698f4-6244-5e63-af81-838f61e64990",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        2120,
-        460
+        3220,
+        520
       ],
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 3000,
-      "onError": "continueErrorOutput"
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
-        "text": "={{ '⚠️ <b>No se pudo enviar el email de confirmación</b>\\n' + $('Confirmation Email').first().json.to + '\\nRevisa la credencial de Gmail en n8n.' }}",
-        "additionalFields": {
-          "appendAttribution": false,
-          "disable_web_page_preview": true,
-          "parse_mode": "HTML"
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fa585e3c-b2a7-51ba-b268-7ddc93584bd9",
+              "leftValue": "={{ $json.ok || $json.skipped ? 'yes' : 'no' }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "39cdf986-7576-5ebd-9ebb-22e1a00bfcc4",
+      "name": "Email Sent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3440,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config (book)').first().json, n = cfg.connectors.notify, res = $input.first().json;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nreturn [{ json: { provider: n.provider, chat_id: n.chat_id,\n  text: `⚠️ <b>No se pudo enviar el email de confirmación</b>\\n${esc($('Confirmation Email').first().json.to)}\\n${esc(res.error || '')}\\nRevisa el conector de email (credencial) en n8n.` } }];"
+      },
+      "id": "7cf10d45-4f5f-5e8d-a063-0a09a70418c4",
+      "name": "Email Failed Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3440,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "once",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTIFY_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {
+          "waitForSubWorkflow": true
         }
       },
-      "id": "095078e1-7d41-53b8-ba75-68234b1ba3c2",
-      "name": "Email Failed",
-      "type": "n8n-nodes-base.telegram",
+      "id": "02dc258a-4d13-55b8-b0de-136df967c857",
+      "name": "Notify Email Failed",
+      "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        2340,
-        620
+        3660,
+        700
       ],
       "onError": "continueRegularOutput"
     }
@@ -408,14 +544,36 @@
       "main": [
         [
           {
-            "node": "Read Demos",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read Demos": {
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Agenda Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agenda Request": {
+      "main": [
+        [
+          {
+            "node": "Get Busy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Busy": {
       "main": [
         [
           {
@@ -441,14 +599,36 @@
       "main": [
         [
           {
-            "node": "Read Demos (book)",
+            "node": "Config (book)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read Demos (book)": {
+    "Config (book)": {
+      "main": [
+        [
+          {
+            "node": "Agenda Request (book)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agenda Request (book)": {
+      "main": [
+        [
+          {
+            "node": "Get Busy (book)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Busy (book)": {
       "main": [
         [
           {
@@ -474,7 +654,7 @@
       "main": [
         [
           {
-            "node": "Demo Row",
+            "node": "Event Request",
             "type": "main",
             "index": 0
           }
@@ -482,6 +662,28 @@
         [
           {
             "node": "Respond Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Request": {
+      "main": [
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Demo Row",
             "type": "main",
             "index": 0
           }
@@ -503,17 +705,6 @@
       "main": [
         [
           {
-            "node": "Notify Demo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Notify Demo": {
-      "main": [
-        [
-          {
             "node": "Respond Book",
             "type": "main",
             "index": 0
@@ -522,6 +713,28 @@
       ]
     },
     "Respond Book": {
+      "main": [
+        [
+          {
+            "node": "Demo Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Demo Alert": {
+      "main": [
+        [
+          {
+            "node": "Notify Demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Demo": {
       "main": [
         [
           {
@@ -536,19 +749,41 @@
       "main": [
         [
           {
-            "node": "Send Confirmation",
+            "node": "Send Email",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send Confirmation": {
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Email Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Sent?": {
       "main": [
         [],
         [
           {
-            "node": "Email Failed",
+            "node": "Email Failed Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Failed Alert": {
+      "main": [
+        [
+          {
+            "node": "Notify Email Failed",
             "type": "main",
             "index": 0
           }

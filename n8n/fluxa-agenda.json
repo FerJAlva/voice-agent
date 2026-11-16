@@ -1,0 +1,419 @@
+{
+  "name": "Fluxa Voice Agent · Agenda",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Fluxa · Agenda (conector de calendario)\nEntrada: `action` (busy / create), `provider` y datos. Salida siempre igual:\n- **busy** → `{ busy: [{start, end}] }` huecos ocupados\n- **create** → `{ ok, event_id, meet_url }`\n**Proveedores:** `sheets` (las reservas de la pestaña Demos bloquean el hueco) · `google_calendar` (lee el calendario y crea el evento con Google Meet; **para usarlo: activa los 2 nodos de Google Calendar, elige su credencial y pon `agenda.provider: 'google_calendar'` en Config**).\n**Añadir otro (Outlook, Cal.com…):** una salida más en **Route** con la misma salida.",
+        "width": 1100,
+        "height": 300,
+        "color": 1
+      },
+      "id": "c5c12ee1-fb20-5d48-92d9-7584a673a1de",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b85863b8-6ed0-5403-9001-1d1c02cced58",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b487092f-71e3-5bee-9f21-f8c1afc76aa7",
+                    "leftValue": "={{ $json.action + ':' + $json.provider }}",
+                    "rightValue": "busy:sheets",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "busy:sheets"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e7287b95-dc38-57df-8639-d358cc82a5dd",
+                    "leftValue": "={{ $json.action + ':' + $json.provider }}",
+                    "rightValue": "busy:google_calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "busy:google_calendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9265eec7-befd-5946-8020-7f0d67c70a92",
+                    "leftValue": "={{ $json.action + ':' + $json.provider }}",
+                    "rightValue": "create:sheets",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create:sheets"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "edac0b1a-d2da-554c-9cae-e596adbe2cb0",
+                    "leftValue": "={{ $json.action + ':' + $json.provider }}",
+                    "rightValue": "create:google_calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create:google_calendar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "otro"
+        }
+      },
+      "id": "f8142440-461f-5718-99f9-f543ef363962",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Start').first().json.sheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Start').first().json.tab }}",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "id": "5cca4421-974b-578c-8a3d-837482dc89ea",
+      "name": "Read Demos (Sheets)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        500,
+        -60
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// FLUXA · AGENDA · Sheets → busy times. Each row of the Demos tab blocks [slot_iso, slot_iso + slot length).\nconst req = $('Start').first().json;\nconst dur = (Number(req.slot_minutes) || 30) * 60000;\nconst busy = $input.all()\n  .map(i => new Date(String(i.json.slot_iso || '')))\n  .filter(d => !isNaN(d))\n  .map(d => ({ start: d.toISOString(), end: new Date(d.getTime() + dur).toISOString() }));\nreturn [{ json: { ok: true, provider: 'sheets', busy } }];\n"
+      },
+      "id": "a94d6eb3-b8e3-5a0f-9938-136208e653a1",
+      "name": "Busy (Sheets)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $('Start').first().json.calendar_id }}",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $('Start').first().json.from }}",
+        "timeMax": "={{ $('Start').first().json.to }}",
+        "options": {}
+      },
+      "id": "196af428-a777-534f-a83f-b5ab055d9146",
+      "name": "List Events (Google Calendar)",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        500,
+        100
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// FLUXA · AGENDA · Google Calendar → busy times. Every event that blocks time counts\n// (events marked \"free\"/transparent and cancelled ones do not). All-day events block the whole day.\n// If the Google Calendar node is disabled (no credential yet) n8n passes the request through: fail loudly.\nif ($input.first().json.action) throw new Error('Google Calendar no está conectado: activa los nodos de Google Calendar en el sub-workflow Agenda y elige la credencial.');\nconst busy = [];\nfor (const { json: e } of $input.all()) {\n  if (!e || !e.start || e.status === 'cancelled' || e.transparency === 'transparent') continue;\n  const start = new Date(e.start.dateTime || e.start.date), end = new Date((e.end || {}).dateTime || (e.end || {}).date || start);\n  if (!isNaN(start) && !isNaN(end) && end > start) busy.push({ start: start.toISOString(), end: end.toISOString() });\n}\nreturn [{ json: { ok: true, provider: 'google_calendar', busy } }];\n"
+      },
+      "id": "27417010-c225-51c2-bf8b-11ae4e2dcf46",
+      "name": "Busy (Google Calendar)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// The Demos row is the booking: nothing to create.\nreturn [{ json: { ok: true, provider: 'sheets', event_id: '', meet_url: '' } }];"
+      },
+      "id": "312a2611-b94d-5795-8aa4-c6e4efcb8d14",
+      "name": "No Event (Sheets)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $('Start').first().json.calendar_id }}",
+          "mode": "id"
+        },
+        "start": "={{ $('Start').first().json.booking.start }}",
+        "end": "={{ $('Start').first().json.booking.end }}",
+        "useDefaultReminders": true,
+        "additionalFields": {
+          "summary": "={{ $('Start').first().json.booking.summary }}",
+          "description": "={{ $('Start').first().json.booking.description }}",
+          "attendees": [
+            "={{ $('Start').first().json.booking.email }}"
+          ],
+          "sendUpdates": "all",
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "hangoutsMeet"
+            }
+          }
+        }
+      },
+      "id": "60bf8d55-9866-51a5-be05-4ffdbc065d5d",
+      "name": "Create Event (Google Calendar)",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        500,
+        420
+      ],
+      "onError": "continueErrorOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// FLUXA · AGENDA · Google Calendar event created → standard result with the Google Meet link.\nconst e = $input.first().json || {};\n// Disabled node (no credential yet): n8n passes the request through instead of creating the event\nif (e.action) return [{ json: { ok: false, provider: 'google_calendar', event_id: '', meet_url: '', error: 'Google Calendar no está conectado (nodo desactivado en el sub-workflow Agenda).' } }];\nconst video = (((e.conferenceData || {}).entryPoints) || []).find(p => p.entryPointType === 'video');\nreturn [{ json: { ok: true, provider: 'google_calendar', event_id: e.id || '', meet_url: e.hangoutLink || (video && video.uri) || '', html_link: e.htmlLink || '' } }];\n"
+      },
+      "id": "6baa0886-9c65-59d0-913d-8dd83c664e1f",
+      "name": "Event Created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json.error;\nreturn [{ json: { ok: false, provider: 'google_calendar', event_id: '', meet_url: '', error: String((e && e.message) || e || 'error') } }];"
+      },
+      "id": "813fd17c-78ba-5a52-8436-8e37fa880e69",
+      "name": "Event Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unauthorized request or unknown provider: no busy times, nothing created.\nreturn [{ json: { ok: true, skipped: true, busy: [], event_id: '', meet_url: '' } }];"
+      },
+      "id": "21086fcb-11dd-5e9e-bc9a-8cfe278a9021",
+      "name": "Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        600
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Read Demos (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Events (Google Calendar)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Event (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Event (Google Calendar)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Demos (Sheets)": {
+      "main": [
+        [
+          {
+            "node": "Busy (Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Events (Google Calendar)": {
+      "main": [
+        [
+          {
+            "node": "Busy (Google Calendar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event (Google Calendar)": {
+      "main": [
+        [
+          {
+            "node": "Event Created",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Event Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid"
+  },
+  "active": false,
+  "tags": []
+}

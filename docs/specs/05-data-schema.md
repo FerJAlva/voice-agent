@@ -16,6 +16,8 @@ Almacenamiento: Google Sheets "Fluxa demo". Sin autenticación de usuarios (demo
 | use_case | string | automatizar reporting semanal | opcional |
 | language | es/en | es | |
 | created_at | ISO | | |
+| meet_url | URL | https://meet.google.com/abc-defg-hij | solo con el conector `google_calendar` |
+| event_id | string | | id del evento en el calendario (para cambiarlo o cancelarlo) |
 
 ## Pestaña `Leads` (1 fila por llamada)
 | columna | tipo | notas |
@@ -36,7 +38,7 @@ Almacenamiento: Google Sheets "Fluxa demo". Sin autenticación de usuarios (demo
 **Relación:** `Leads.email` (v0.4, si se recoge) ↔ `Demos.email`; `Leads.conversation_id` ↔ transcripción en ElevenLabs.
 
 ## Reglas de lead score (BANT-lite)
-Configurables en el objeto `SCORING` del nodo **Post-call** (`src/post_call.js`). Cada regla deja su motivo en `score_reasons` y en el aviso de Telegram.
+Configurables en el sub-workflow **Config** → `scoring` (`src/config.js`; valores por defecto en `src/post_call.js`). Cada regla deja su motivo en `score_reasons` y en el aviso de Telegram.
 - Tamaño de equipo: ≥ 20 → +25; ≥ 5 → +15
 - Cargo con decisión (CEO, founder, dueño/a, socio, VP, director/a, head, manager, gerente, responsable, jefe/a…) → +25
 - Plazo cercano: esta/próxima semana, mes o trimestre, "cuanto antes", "en 2 meses", o un mes nombrado a 3 meses o menos → +25

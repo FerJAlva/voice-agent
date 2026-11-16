@@ -46,7 +46,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// FLUXA · SELF-TEST CONFIG — edit these two values, then \"Execute workflow\".\n// Calls the three production webhooks with sample data. No local tools needed.\n// ============================================================\nreturn [{ json: {\n  baseUrl: 'https://REPLACE_WITH_YOUR_N8N_DOMAIN/webhook',   // e.g. https://my-n8n.example.com/webhook\n  secret: 'CHANGE_ME_IN_N8N'                                  // same value as SECRET in Availability / Book (leave as is if unchanged)\n} }];\n"
+        "jsCode": "// ============================================================\n// FLUXA · SELF-TEST CONFIG — edit these two values, then \"Execute workflow\".\n// Calls the three production webhooks with sample data. No local tools needed.\n// ============================================================\nreturn [{ json: {\n  baseUrl: 'https://REPLACE_WITH_YOUR_N8N_DOMAIN/webhook',   // e.g. https://my-n8n.example.com/webhook\n  secret: 'CHANGE_ME_IN_N8N'                                  // same value as security.demo_key in the Config sub-workflow (leave as is if unchanged)\n} }];\n"
       },
       "id": "507edd36-dd7b-5e0b-a50a-d1c113f3ce6e",
       "name": "Config",

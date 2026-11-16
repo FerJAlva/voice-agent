@@ -1,8 +1,11 @@
 // ============================================================
-// FLUXA DEMO · POST-CALL  (ElevenLabs post-call webhook)
+// FLUXA · POST-CALL  (ElevenLabs post-call webhook)
 // Extracts summary and collected data, scores the lead (BANT-lite) and prepares
-// a row for the "Leads" tab plus a Telegram message.
+// a row for the store connector plus the brief for the notify connector.
+// Scoring weights and thresholds come from Config (scoring); the defaults below apply otherwise.
 // ============================================================
+const cfg = $('Config').first().json;
+const C = cfg.scoring || {};
 const req = $('Post-call Webhook').first().json;
 const p = req.body || {};
 const d = p.data || p;
@@ -17,18 +20,18 @@ const val = (k) => { const x = dc[k]; return x == null ? '' : (typeof x === 'obj
 const transcript = Array.isArray(d.transcript) ? d.transcript : [];
 const meta = d.metadata || {};
 
-// ---------- LEAD SCORING (edit SCORING to adapt it to each client) ----------
+// ---------- LEAD SCORING (adapt it per client in Config → scoring) ----------
 // Each rule adds points and leaves a reason, so the sales team sees WHY a lead is hot.
 const SCORING = {
-  hot: 70, warm: 40,                                   // tier thresholds (0–100)
-  teamLarge: 20, teamMid: 5,                           // team-size thresholds
-  weights: { teamLarge: 25, teamMid: 15, decisionRole: 25, nearTimeline: 25, clearUseCase: 15, demoBooked: 10, fitHigh: 10, fitMedium: 5 },
+  hot: C.hot ?? 70, warm: C.warm ?? 40,                       // tier thresholds (0–100)
+  teamLarge: C.team_large ?? 20, teamMid: C.team_mid ?? 5,    // team-size thresholds
+  weights: { teamLarge: 25, teamMid: 15, decisionRole: 25, nearTimeline: 25, clearUseCase: 15, demoBooked: 10, fitHigh: 10, fitMedium: 5, ...(C.weights || {}) },
   // Roles that can decide or strongly influence the purchase (ES/EN)
-  decisionRoles: /\b(ceo|coo|cto|cfo|cmo|cro|cio|chief|founder|co-?founder|fundador[a]?|owner|dueñ[oa]|socio|partner|vp|vice ?president|president[ea]?|director[a]?|head|lead|manager|gerente|responsable|jef[ea])\b/i,
+  decisionRoles: C.decision_roles ? new RegExp(C.decision_roles, 'i') : /\b(ceo|coo|cto|cfo|cmo|cro|cio|chief|founder|co-?founder|fundador[a]?|owner|dueñ[oa]|socio|partner|vp|vice ?president|president[ea]?|director[a]?|head|lead|manager|gerente|responsable|jef[ea])\b/i,
   // Timelines within ~3 months
-  nearTimeline: /(this|next) (week|month|quarter)|asap|right away|urgent|immediately|in (a|one|two|three|1|2|3) (weeks?|months?)|est[ea] (semana|mes|trimestre)|pr[oó]xim[oa] (semana|mes|trimestre)|cuanto antes|ya mismo|urgente|inmediat|en (una|dos|tres|1|2|3) (semanas?|mes|meses)/i,
-  nearMonths: 3,                                       // a month named by the caller ("en enero") counts if it is at most this many months ahead
-  minUseCaseWords: 4                                   // a use case with at least this many words counts as clear
+  nearTimeline: C.near_timeline ? new RegExp(C.near_timeline, 'i') : /(this|next) (week|month|quarter)|asap|right away|urgent|immediately|in (a|one|two|three|1|2|3) (weeks?|months?)|est[ea] (semana|mes|trimestre)|pr[oó]xim[oa] (semana|mes|trimestre)|cuanto antes|ya mismo|urgente|inmediat|en (una|dos|tres|1|2|3) (semanas?|mes|meses)/i,
+  nearMonths: C.near_months ?? 3,                             // a month named by the caller ("en enero") counts if it is at most this many months ahead
+  minUseCaseWords: C.min_use_case_words ?? 4                  // a use case with at least this many words counts as clear
 };
 const W = SCORING.weights;
 const reasons = [];                                    // [points, text]
@@ -62,7 +65,7 @@ const row = {
   score, tier, score_reasons: scoreReasons, summary: String(a.transcript_summary || '').slice(0, 1500), turns: transcript.filter(t => t && t.message).length
 };
 // Monthly usage counter (ElevenLabs free plan = 15 min/month). Persists in workflow static data (production runs).
-const FREE_MIN = 15;
+const FREE_MIN = ((cfg.usage || {}).free_minutes) ?? 15;   // 0 = hide the counter
 const sd = (typeof $getWorkflowStaticData === 'function') ? $getWorkflowStaticData('global') : {};
 const month = new Date().toISOString().slice(0, 7);
 if (sd.month !== month) { sd.month = month; sd.seconds = 0; sd.calls = 0; }
@@ -80,6 +83,6 @@ const text = `${isSelfTest ? '🧪 <b>[AUTOPRUEBA]</b> ' : ''}📞 <b>Nueva llam
   `Equipo: ${esc(row.team_size || '?')} · Plazo: ${esc(row.timeline || '?')} · Demo: ${row.demo_booked === 'true' ? 'sí' : 'no'}` +
   `\n<i>Por qué: ${esc(scoreReasons)}</i>` +
   (row.summary ? `\n\n${esc(row.summary.slice(0, 600))}` : '') +
-  `\n\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') + (isText && !isSelfTest ? ' · (chat de texto: no cuenta)' : '') +
-  (usedMin >= FREE_MIN * 0.8 ? '\n⚠️ Quedan pocos minutos: la demo dejará de responder al llegar a 15.' : '');
+  (FREE_MIN ? `\n\n⏱️ Minutos de voz este mes: ~${usedMin} / ${FREE_MIN} (plan gratuito) · llamadas: ${sd.calls}` + (isSelfTest ? ' · (autoprueba: no cuenta)' : '') + (isText && !isSelfTest ? ' · (chat de texto: no cuenta)' : '') +
+  (usedMin >= FREE_MIN * 0.8 ? `\n⚠️ Quedan pocos minutos: la demo dejará de responder al llegar a ${FREE_MIN}.` : '') : '');
 return [{ json: { row, text } }];

@@ -104,7 +104,10 @@ Si una herramienta no tiene nodo en n8n, casi todas tienen una API, que se conec
 - Un extra por cada conector fuera del paquete estándar.
 - Mantenimiento mensual opcional (ya descrito en `docs/client-delivery.md`).
 
-## 5. Por dónde empezaría
+## 5. Estado (v0.7)
+Hecho: puntuación configurable y explicada (v0.6), **Config + sub-workflows Agenda, Store, Notify y Email** y el conector **Google Calendar con Meet** (v0.7, apagado en la demo hasta conectar la credencial; ver `docs/setup.md`). Siguiente: HubSpot (Store) y Slack (Notify).
+
+## 6. Por dónde empezaría
 
 1. **Puntuación configurable y explicada** (poco trabajo, mucho valor: el comercial entiende el número).
 2. **Nodo Config + sub-workflows** para Agenda, Guardar, Avisar y Email, dejando los conectores actuales como versión por defecto.
