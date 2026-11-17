@@ -106,6 +106,10 @@ err['connections'] = {"Error Trigger": {"main": [[{"node": "Explain Error", "typ
                       "Explain Error": {"main": [[{"node": "Config (errors)", "type": "main", "index": 0}]]},
                       "Config (errors)": {"main": [[{"node": "Alert on Telegram", "type": "main", "index": 0}]]}}
 ex = next(n for n in err['nodes'] if n['name'] == 'Explain Error')
+# A failing connector fails twice: its own run (mode "integrated") and the caller. Alert once, for the caller
+# (its message already carries the connector's error). Tested in n8n 2026-11-17.
+ex['parameters']['jsCode'] = ("// All-in-one: skip the connector's own failure; the calling run reports it with the same message.\n"
+                              "if ((($input.first().json || {}).execution || {}).mode === 'integrated') return [];\n" + ex['parameters']['jsCode'])
 err['nodes'].append({"parameters": {"mode": "once", "workflowId": {"__rl": True, "value": "REPLACE_WITH_CONFIG_WORKFLOW_ID", "mode": "id"},
                      "options": {"waitForSubWorkflow": True}}, "id": "x", "name": "Config (errors)", "type": "n8n-nodes-base.executeWorkflow",
                      "typeVersion": 1.2, "position": [ex['position'][0] + 220, ex['position'][1]]})

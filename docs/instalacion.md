@@ -87,7 +87,7 @@ Ten en cuenta que cualquier evento de ese calendario bloquea el hueco, incluidos
 
 ## 7. Publica
 
-1. **Settings** del workflow: zona horaria igual que en Config y **Error workflow → este mismo workflow** ("Fluxa Voice Agent · All-in-one"). Así, si algo falla, te llega un aviso por Telegram explicando qué pasó.
+1. **Settings** del workflow: pon la misma zona horaria que en Config. Los **avisos de error** no necesitan configuración: el bloque ③ Error Alert está dentro del mismo workflow y n8n lo activa solo cuando una ejecución real falla. Te llega un único aviso por Telegram con el nodo que falló y el motivo, aunque el fallo ocurra dentro de un conector. Las ejecuciones manuales de prueba no generan aviso.
 2. Pulsa **Publish**.
 3. Abre los nodos `Availability Webhook`, `Book Webhook` y `Post-call Webhook` y copia sus **URLs de producción**. Acaban en `/webhook/fluxa-availability`, `/webhook/fluxa-book` y `/webhook/fluxa-post-call`.
 
@@ -154,3 +154,5 @@ Para cambiar lo que dice el agente (tono, preguntas, información de producto), 
 | El agente deja de responder a mitad de mes | Se acabaron los minutos del plan de ElevenLabs | Mira el contador en los avisos o sube de plan |
 
 Si un error no está en esta tabla, el aviso de Telegram del bloque Error Alert indica el nodo que falló y el mensaje. Con eso y la ejecución en n8n se localiza rápido.
+
+**Comprobar que los avisos de error funcionan:** con el workflow publicado, pon temporalmente un `sheet_id` inventado en Config y lanza la autoprueba. Debe llegar un aviso "No se encuentra la hoja…" por Telegram. Después vuelve a poner el ID bueno.

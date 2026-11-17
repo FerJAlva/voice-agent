@@ -4,6 +4,7 @@
 - **Versión todo en uno** (`n8n/fluxa-all-in-one.json`): todo el backend en un solo workflow, para vender o compartir. Se importa en un paso: no hay IDs de sub-workflows que rellenar porque se llama a sí mismo. La genera `scripts/build_all_in_one.py` a partir de los workflows modulares, así que ambas versiones salen del mismo código. Probada en n8n: disponibilidad, reserva con Google Calendar y Meet, email, Telegram y Leads.
 - **Guía de instalación y uso para clientes:** `docs/instalacion.md` (requisitos, hoja, Telegram, credenciales, Config, Google Calendar, ElevenLabs, autoprueba, uso diario y problemas frecuentes).
 - **Diagramas del flujo:** `docs/arquitectura.md` (vista general, una llamada paso a paso y el interior de n8n, en Mermaid).
+- Aviso de errores de la versión todo en uno probado en n8n: el Error Trigger del propio workflow salta solo, sin configurar nada, y lee el chat de Telegram de Config. Si falla un conector, llega un único aviso en vez de dos.
 - 6 pruebas nuevas sobre la versión todo en uno (46 en total).
 
 ## v0.7.1 — 2026-11-16
