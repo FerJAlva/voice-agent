@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8 — 2026-11-17
+- **Versión todo en uno** (`n8n/fluxa-all-in-one.json`): todo el backend en un solo workflow, para vender o compartir. Se importa en un paso: no hay IDs de sub-workflows que rellenar porque se llama a sí mismo. La genera `scripts/build_all_in_one.py` a partir de los workflows modulares, así que ambas versiones salen del mismo código. Probada en n8n: disponibilidad, reserva con Google Calendar y Meet, email, Telegram y Leads.
+- **Guía de instalación y uso para clientes:** `docs/instalacion.md` (requisitos, hoja, Telegram, credenciales, Config, Google Calendar, ElevenLabs, autoprueba, uso diario y problemas frecuentes).
+- **Diagramas del flujo:** `docs/arquitectura.md` (vista general, una llamada paso a paso y el interior de n8n, en Mermaid).
+- 6 pruebas nuevas sobre la versión todo en uno (46 en total).
+
 ## v0.7.1 — 2026-11-16
 - **Google Calendar activado en producción** (credencial "Google Calendar account"): disponibilidad desde el calendario real y reserva con evento, invitación y enlace de Meet en el email.
 - `agenda.calendar_id` debe ser el email del calendario: n8n rechaza `primary`. Placeholder nuevo `REPLACE_WITH_CALENDAR_EMAIL`.

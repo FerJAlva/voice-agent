@@ -1,5 +1,7 @@
 # Puesta en marcha (≈ 45–60 min)
 
+> Esta es la **versión modular** (un workflow por función). Para instalarlo en un solo paso usa la **versión todo en uno** con la guía [instalacion.md](instalacion.md).
+
 Todo con tu cuenta **personal** y datos ficticios. Nada del empleador actual.
 
 ## 1. Google Sheets

@@ -345,3 +345,6 @@ json.dump({"name": "Fluxa Voice Agent · Error Alert", "nodes": nodes, "connecti
            "settings": {"executionOrder": "v1", "timezone": "Europe/Madrid"}, "active": False, "tags": []},
           open('n8n/fluxa-error-alert.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 print('ok error-alert')
+
+# ---------- Versión todo en uno (un solo workflow, a partir de los anteriores) ----------
+import runpy; runpy.run_path('scripts/build_all_in_one.py')

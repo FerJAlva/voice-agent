@@ -6,7 +6,7 @@ Nora answers website visitors by voice, in Spanish or English, understands their
 
 **Try it:** `https://ferjalva.github.io/fluxa/` (short calls, limited monthly minutes) · **Video:** _coming soon_
 
-> **Para clientes:** qué hace y con qué se conecta → [`docs/producto.md`](docs/producto.md)
+> **Para clientes:** qué hace y con qué se conecta → [`docs/producto.md`](docs/producto.md) · **Instalación paso a paso** (un solo workflow) → [`docs/instalacion.md`](docs/instalacion.md) · **Diagramas del flujo** → [`docs/arquitectura.md`](docs/arquitectura.md)
 
 ## How it works
 ```
@@ -35,4 +35,4 @@ ElevenLabs Agents · n8n · Google Sheets · Gmail · Telegram · plain HTML (Gi
 Runs at **0 €/month** on free tiers. See [COSTS.md](COSTS.md).
 
 ## Repo
-`agent/` agent configuration · `src/` n8n code nodes · `n8n/` importable workflows (Tools and Post-call + Config and 4 swappable connectors: Agenda, Store, Notify, Email) · `web/` demo page · `docs/` setup and test scenarios · `tests/` offline tests.
+`agent/` agent configuration · `src/` n8n code nodes · `n8n/` importable workflows: modular (Tools and Post-call + Config and 4 swappable connectors: Agenda, Store, Notify, Email) or **all-in-one** (`fluxa-all-in-one.json`, a single workflow generated from the same code) · `web/` demo page · `docs/` setup and test scenarios · `tests/` offline tests.
